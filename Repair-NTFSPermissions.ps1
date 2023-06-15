@@ -486,7 +486,7 @@ function Get-AvailableDriveLetter {
     }
     #endregion Process Input ##########################################################
 
-    if (Test-Windows -eq $true) {
+    if ((Test-Windows) -eq $true) {
 
         $arrAllPossibleLetters = 65..90 | ForEach-Object { [char]$_ }
 
@@ -729,6 +729,7 @@ function Repair-NTFSPermissionsRecursively {
     # Syntax: Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate'
 
     $strThisObjectPath = $args[0]
+    $boolAllowRecursiveRun = $args[1]
 
     $FILEPATHLIMIT = 260
     $FOLDERPATHLIMIT = 248
@@ -739,86 +740,91 @@ function Repair-NTFSPermissionsRecursively {
     # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
     # (shorter) length limit
     if ($strThisObjectPath.Length -ge $FOLDERPATHLIMIT) {
-        $intAttemptNumber = 0
-        $boolPossibleAttemptsExceeded = $false
-        $boolTenablePathFound = $false
+        if ($boolAllowRecursiveRun -eq $false) {
+            Write-Error "Despite attempts to mitigate, the path length of $strThisObjectPath exceeds the maximum length of $FOLDERPATHLIMIT characters."
+            return
+        } else {
+            $intAttemptNumber = 0
+            $boolPossibleAttemptsExceeded = $false
+            $boolTenablePathFound = $false
 
-        # Get path separator
-        # $strTempPathToAdd = '###FAKE###'
-        # $strTempPath = Join-Path $strThisObjectPath $strTempPathToAdd
-        # $strPathSeparator = $strTempPath.Substring($strTempPath.Length - $strTempPathToAdd.Length - ($strTempPath.Length - $strTempPathToAdd.Length - $strThisObjectPath.Length), $strTempPath.Length - $strTempPathToAdd.Length - $strThisObjectPath.Length)
+            # Get path separator
+            # $strTempPathToAdd = '###FAKE###'
+            # $strTempPath = Join-Path $strThisObjectPath $strTempPathToAdd
+            # $strPathSeparator = $strTempPath.Substring($strTempPath.Length - $strTempPathToAdd.Length - ($strTempPath.Length - $strTempPathToAdd.Length - $strThisObjectPath.Length), $strTempPath.Length - $strTempPathToAdd.Length - $strThisObjectPath.Length)
 
-        $arrPathElements = @(Split-Path -Path $strThisObjectPath)
-        # $arrPathElements = Split-StringOnLiteralString $strThisObjectPath $strPathSeparator
+            $arrPathElements = @(Split-Path -Path $strThisObjectPath)
+            # $arrPathElements = Split-StringOnLiteralString $strThisObjectPath $strPathSeparator
 
-        while (($boolPossibleAttemptsExceeded -eq $false) -and ($boolTenablePathFound -eq $false)) {
-            $strParentFolder = $arrPathElements[0]
-            for ($intCounter = 1; $intCounter -le ($arrPathElements.Count - 2 - $intAttemptNumber); $intCounter++) {
-                $strParentFolder = Join-Path -Path $strParentFolder -ChildPath $arrPathElements[$intCounter]
-                # $strParentFolder += $strPathSeparator + $arrPathElements[$intCounter]
-            }
-            if ($strParentFolder -eq $arrPathElements[0]) {
-                $boolPossibleAttemptsExceeded = $true
-            }
-            if ($strParentFolder -eq $strThisObjectPath) {
-                # This shouldn't be possible
-                $boolPossibleAttemptsExceeded = $true
-            } else {
-                if ($strParentFolder.Length -lt $FOLDERPATHLIMIT) {
-                    $boolTenablePathFound = $true
-                } else {
-                    # Parent folder still exceeds length limit
-                    # Try again
-                    $intAttemptNumber++
+            while (($boolPossibleAttemptsExceeded -eq $false) -and ($boolTenablePathFound -eq $false)) {
+                $strParentFolder = $arrPathElements[0]
+                for ($intCounter = 1; $intCounter -le ($arrPathElements.Count - 2 - $intAttemptNumber); $intCounter++) {
+                    $strParentFolder = Join-Path -Path $strParentFolder -ChildPath $arrPathElements[$intCounter]
+                    # $strParentFolder += $strPathSeparator + $arrPathElements[$intCounter]
                 }
-            }
-        }
-
-        if ($boolTenablePathFound) {
-            $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
-            if ($arrAvailableDriveLetters.Count -gt 0) {
-                $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strParentFolder.Replace('$', '`$') + '"'
-                Write-Debug ('About to run command: ' + $strCommand)
-                $null = Invoke-Expression $strCommand
-
-                $strRemainderOfPath = $strThisObjectPath.Substring($strParentFolder.Length + 1, $strThisObjectPath.Length - $strParentFolder.Length - 1)
-
-                $doubleSecondsCounter = 0
-                $boolErrorOccurredUsingDriveLetter = $true
-
-                # Try Join-Path and sleep for up to 10 seconds until it's successful
-                while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
-                    if (Test-Path ($strDriveLetterToUse + ':')) {
-                        $strJoinedPath = $null
-                        $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) ($strDriveLetterToUse + ":") $strRemainderOfPath
-
-                        if ($boolSuccess -eq $false) {
-                            Start-Sleep 0.2
-                            $doubleSecondsCounter += 0.2
-                        } else {
-                            $boolErrorOccurredUsingDriveLetter = $false
-                        }
+                if ($strParentFolder -eq $arrPathElements[0]) {
+                    $boolPossibleAttemptsExceeded = $true
+                }
+                if ($strParentFolder -eq $strThisObjectPath) {
+                    # This shouldn't be possible
+                    $boolPossibleAttemptsExceeded = $true
+                } else {
+                    if ($strParentFolder.Length -lt $FOLDERPATHLIMIT) {
+                        $boolTenablePathFound = $true
                     } else {
-                        Start-Sleep 0.2
-                        $doubleSecondsCounter += 0.2
+                        # Parent folder still exceeds length limit
+                        # Try again
+                        $intAttemptNumber++
                     }
                 }
-
-                if ($boolErrorOccurredUsingDriveLetter -eq $true) {
-                    Write-Error ('Unable to process the path "' + $strParentFolder.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
-                } else {
-                    Repair-NTFSPermissionsRecursively $strNewPath
-                }
-
-                $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                Write-Debug ('About to run command: ' + $strCommand)
-                $null = Invoke-Expression $strCommand
-            } else {
-                Write-Error ('Cannot process the following path because it is too long and there are no drive letters available to use as a mount point: ' + $strThisObjectPath)
             }
-        } elseif ($boolPossibleAttemptsExceeded -eq $true) {
-            Write-Error ('Cannot process the following path because it contains no parent folder element that is of an acceptable length to connect to a mount point: ' + $strThisObjectPath)
+
+            if ($boolTenablePathFound) {
+                $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
+                if ($arrAvailableDriveLetters.Count -gt 0) {
+                    $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
+                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strParentFolder.Replace('$', '`$') + '"'
+                    Write-Verbose ('About to run command: ' + $strCommand)
+                    $null = Invoke-Expression $strCommand
+
+                    $strRemainderOfPath = $strThisObjectPath.Substring($strParentFolder.Length + 1, $strThisObjectPath.Length - $strParentFolder.Length - 1)
+
+                    $doubleSecondsCounter = 0
+                    $boolErrorOccurredUsingDriveLetter = $true
+
+                    # Try Join-Path and sleep for up to 10 seconds until it's successful
+                    while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
+                        if (Test-Path ($strDriveLetterToUse + ':')) {
+                            $strJoinedPath = $null
+                            $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) ($strDriveLetterToUse + ":") $strRemainderOfPath
+
+                            if ($boolSuccess -eq $false) {
+                                Start-Sleep 0.2
+                                $doubleSecondsCounter += 0.2
+                            } else {
+                                $boolErrorOccurredUsingDriveLetter = $false
+                            }
+                        } else {
+                            Start-Sleep 0.2
+                            $doubleSecondsCounter += 0.2
+                        }
+                    }
+
+                    if ($boolErrorOccurredUsingDriveLetter -eq $true) {
+                        Write-Error ('Unable to process the path "' + $strParentFolder.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
+                    } else {
+                        Repair-NTFSPermissionsRecursively $strNewPath $true
+                    }
+
+                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
+                    Write-Verbose ('About to run command: ' + $strCommand)
+                    $null = Invoke-Expression $strCommand
+                } else {
+                    Write-Error ('Cannot process the following path because it is too long and there are no drive letters available to use as a mount point: ' + $strThisObjectPath)
+                }
+            } elseif ($boolPossibleAttemptsExceeded -eq $true) {
+                Write-Error ('Cannot process the following path because it contains no parent folder element that is of an acceptable length to connect to a mount point: ' + $strThisObjectPath)
+            }
         }
     } else {
         $boolCriticalErrorOccurred = $false
@@ -831,7 +837,7 @@ function Repair-NTFSPermissionsRecursively {
             # Take ownership
             # TODO: This does not work if $strThisObjectPath is over 260 characters. Look at https://serverfault.com/questions/232986/overcoming-maximum-file-path-length-restrictions-in-windows
             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
-            Write-Debug ('About to run command: ' + $strCommand)
+            Write-Verbose ('About to run command: ' + $strCommand)
             $null = Invoke-Expression $strCommand
 
             # Should now be able to read permissions
@@ -850,8 +856,9 @@ function Repair-NTFSPermissionsRecursively {
                 # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
 
                 # Take ownership
+                # TODO: This does not work if $strThisObjectPath is over 260 characters. Look at https://serverfault.com/questions/232986/overcoming-maximum-file-path-length-restrictions-in-windows
                 $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
-                Write-Debug ('About to run command: ' + $strCommand)
+                Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
 
                 # Should now be able to read permissions
@@ -861,7 +868,7 @@ function Repair-NTFSPermissionsRecursively {
                 if ($boolSuccess -eq $false) {
                     # We had success reading permissions before, but now that we took
                     # ownership, we suddenly cannot read them. This is a critical error.
-                    Write-Error ('After taking ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, the script is unable to read permissions from the folder using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand)
+                    Write-Error ('After taking ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, the script is unable to read permissions from the folder/file using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand)
                     $boolCriticalErrorOccurred = $true
                 }
             }
@@ -884,11 +891,11 @@ function Repair-NTFSPermissionsRecursively {
             $boolSYSTEMAccountDenyEntryFound = $false
             $boolSYSTEMAccountHasSufficientAccess = $false
             $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-            if ($null -ne $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+            if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
             }
             $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-            if ($null -ne $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+            if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
                 $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
             }
 
@@ -917,7 +924,7 @@ function Repair-NTFSPermissionsRecursively {
                     $boolFoundGroup = $false
 
                     if ($boolFoundGroup -eq $false) {
-                        if ($null -ne $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                        if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
                             # Check the additional administrator account/group
                             if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
                                 $boolFoundGroup = $true
@@ -934,7 +941,7 @@ function Repair-NTFSPermissionsRecursively {
                     }
 
                     if ($boolFoundGroup -eq $false) {
-                        if ($null -ne $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                        if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
                             # Check the additional administrator account/group
                             if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
                                 $boolFoundGroup = $true
@@ -979,6 +986,7 @@ function Repair-NTFSPermissionsRecursively {
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
                 $boolPermissionAdjustmentNecessary = $true
+                Write-Verbose ('Permission adjustment necessary for "' + $strThisObjectPath + '".')
             } else {
                 $boolPermissionAdjustmentNecessary = $false
             }
@@ -986,6 +994,8 @@ function Repair-NTFSPermissionsRecursively {
             $strAllCommandsInThisSection = ''
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false) {
+                Write-Verbose ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $strThisObjectPath + '".')
+                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for administrators
                 if ($objThis.PSIsContainer) {
                     # Is a folder
@@ -994,12 +1004,17 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
+                if ($boolAllowRecursiveRun -eq $true) {
+                    $strCommand += ' 2>&1'
+                }
                 $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Debug ('About to run command: ' + $strCommand)
+                Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
             }
 
             if ($boolSYSTEMAccountHasSufficientAccess -eq $false) {
+                Write-Verbose ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $strThisObjectPath + '".')
+                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for SYSTEM
                 if ($objThis.PSIsContainer) {
                     # Is a folder
@@ -1008,12 +1023,17 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
                 }
+                if ($boolAllowRecursiveRun -eq $true) {
+                    $strCommand += ' 2>&1'
+                }
                 $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Debug ('About to run command: ' + $strCommand)
+                Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
             }
 
             if ($boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false) {
+                Write-Verbose ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $strThisObjectPath + '".')
+                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional administrator
                 if ($objThis.PSIsContainer) {
                     # Is a folder
@@ -1022,12 +1042,17 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
+                if ($boolAllowRecursiveRun -eq $true) {
+                    $strCommand += ' 2>&1'
+                }
                 $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Debug ('About to run command: ' + $strCommand)
+                Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
             }
 
             if ($boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
+                Write-Verbose ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $strThisObjectPath + '".')
+                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional read only account
                 if ($objThis.PSIsContainer) {
                     # Is a folder
@@ -1036,129 +1061,144 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
                 }
+                if ($boolAllowRecursiveRun -eq $true) {
+                    $strCommand += ' 2>&1'
+                }
                 $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Debug ('About to run command: ' + $strCommand)
+                Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
             }
 
             if ($boolPermissionAdjustmentNecessary) {
                 # Permissions should be fixed. Check them again.
 
-                # TODO: Get-Acl is slow if there is latency between the folder structure and the domain controller, probably because of SID lookups. See if there is a way to speed this up without introducing external dependencies.
-                if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']')) {
-                    # Can't use Get-Acl because Get-Acl doesn't support paths with brackets
-
-                    $objThis = Get-Item (($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')) -Force # -Force parameter is required to get hidden items
-
-                    # TODO: GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-                    $objThisFolderPermission = $objThis.GetAccessControl()
+                $boolSuccess = Get-AclSafely ([ref]$objThisFolderPermission) ([ref]$objThis) $strThisObjectPath
+                if ($boolSuccess -eq $false) {
+                    # An error occurred reading permissions with Get-Acl
+                    #
+                    # We had success reading permissions before, but now that we
+                    # granted accounts permission, we suddenly cannot read them. This
+                    # is a critical error.
+                    Write-Error ('After granting permissions to the folder/file "' + $strThisObjectPath + '", the script is unable to read permissions from the folder/file using Get-Acl. The command(s) used to grant permissions were:' + "`n`n" + $strAllCommandsInThisSection)
+                    $boolCriticalErrorOccurred = $true
                 } else {
-                    # No square brackets; use Get-Acl
-                    $objThisFolderPermission = Get-Acl $strThisObjectPath
-                }
-                $arrACEs = @($objThisFolderPermission.Access)
+                    $arrACEs = @($objThisFolderPermission.Access)
 
-                $boolBuiltInAdministratorsDenyEntryFound = $false
-                $boolBuiltInAdministratorsHaveSufficientAccess = $false
-                $boolSYSTEMAccountDenyEntryFound = $false
-                $boolSYSTEMAccountHasSufficientAccess = $false
-                $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-                if ($null -ne $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
-                    $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-                }
-                $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-                if ($null -ne $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
-                    $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-                }
+                    $boolBuiltInAdministratorsDenyEntryFound = $false
+                    $boolBuiltInAdministratorsHaveSufficientAccess = $false
+                    $boolSYSTEMAccountDenyEntryFound = $false
+                    $boolSYSTEMAccountHasSufficientAccess = $false
+                    $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
+                    if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
+                    }
+                    $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
+                    if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
+                    }
 
-                $arrACEs | ForEach-Object {
-                    $objThisACE = $_
-                    if ($objThisACE.IdentityReference.Value -eq $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl) {
-                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                            $boolBuiltInAdministratorsDenyEntryFound = $true
-                        } else {
-                            # assume 'Allow'
-                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                $boolBuiltInAdministratorsHaveSufficientAccess = $true
+                    $arrACEs | ForEach-Object {
+                        $objThisACE = $_
+                        if ($objThisACE.IdentityReference.Value -eq $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl) {
+                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                $boolBuiltInAdministratorsDenyEntryFound = $true
+                            } else {
+                                # assume 'Allow'
+                                if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                    $boolBuiltInAdministratorsHaveSufficientAccess = $true
+                                }
                             }
-                        }
-                    } elseif ($objThisACE.IdentityReference.Value -eq $strNameOfSYSTEMAccountGroupAccordingToGetAcl) {
-                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                            $boolSYSTEMAccountDenyEntryFound = $true
-                        } else {
-                            # assume 'Allow'
-                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                $boolSYSTEMAccountHasSufficientAccess = $true
+                        } elseif ($objThisACE.IdentityReference.Value -eq $strNameOfSYSTEMAccountGroupAccordingToGetAcl) {
+                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                $boolSYSTEMAccountDenyEntryFound = $true
+                            } else {
+                                # assume 'Allow'
+                                if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                    $boolSYSTEMAccountHasSufficientAccess = $true
+                                }
                             }
-                        }
-                    } else {
-                        # check additional accounts
-                        $boolFoundGroup = $false
+                        } else {
+                            # check additional accounts
+                            $boolFoundGroup = $false
 
-                        if ($boolFoundGroup -eq $false) {
-                            if ($null -ne $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
-                                # Check the additional administrator account/group
-                                if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
-                                    $boolFoundGroup = $true
-                                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                        $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
-                                    } else {
-                                        # assume 'Allow'
-                                        if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                            $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+                                    # Check the additional administrator account/group
+                                    if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                                        $boolFoundGroup = $true
+                                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                            $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
+                                        } else {
+                                            # assume 'Allow'
+                                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        if ($boolFoundGroup -eq $false) {
-                            if ($null -ne $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
-                                # Check the additional administrator account/group
-                                if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
-                                    $boolFoundGroup = $true
-                                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                        $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
-                                    } else {
-                                        # assume 'Allow'
-                                        # TODO: This needs to be fixed to convert ReadAndExecute permissions to a string, then look for the string in the FileSystemRights property, which is a comma-separated list. The read only account could also have elevated permissions (something beyond read and execute), which would also be acceptable
-                                        if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                            $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+                                    # Check the additional administrator account/group
+                                    if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                                        $boolFoundGroup = $true
+                                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                            $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
+                                        } else {
+                                            # assume 'Allow'
+                                            # TODO: This needs to be fixed to convert ReadAndExecute permissions to a string, then look for the string in the FileSystemRights property, which is a comma-separated list. The read only account could also have elevated permissions (something beyond read and execute), which would also be acceptable
+                                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                if ($null -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
-                    $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                }
-                if ($null -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
-                    $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                }
+                    if ($null -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
+                    }
+                    if ($null -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
+                    }
 
-                if ($boolBuiltInAdministratorsDenyEntryFound) {
-                    Write-Warning ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
-                    $boolBuiltInAdministratorsHaveSufficientAccess = $false
-                }
-                if ($boolSYSTEMAccountDenyEntryFound) {
-                    Write-Warning ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
-                    $boolSYSTEMAccountHasSufficientAccess = $false
-                }
-                if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                    Write-Warning ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
-                    $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-                }
-                if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                    Write-Warning ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
-                    $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-                }
+                    if ($boolBuiltInAdministratorsDenyEntryFound) {
+                        Write-Warning ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
+                        $boolBuiltInAdministratorsHaveSufficientAccess = $false
+                    }
+                    if ($boolSYSTEMAccountDenyEntryFound) {
+                        Write-Warning ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
+                        $boolSYSTEMAccountHasSufficientAccess = $false
+                    }
+                    if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
+                        Write-Warning ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
+                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
+                    }
+                    if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
+                        Write-Warning ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $strThisObjectPath + '". Please remove this deny permission or update this script to do so.')
+                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
+                    }
 
-                if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
-                    $boolCriticalErrorOccurred = $true
-                    Write-Error ('Despite attempting to apply permissions to the folder/file "' + $strThisObjectPath + '", the permissions are not present as expected. The commands that were run to fix the permissions issues were:' + "`n" + $strAllCommandsInThisSection)
+                    if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
+                        Write-Verbose ('Despite attempting to apply permissions to the folder/file, the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.')
+                        # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
+                        if ($boolAllowRecursiveRun -eq $true) {
+                            # Try taking ownership of the folder/file
+
+                            # Take ownership
+                            # TODO: This does not work if $strThisObjectPath is over 260 characters. Look at https://serverfault.com/questions/232986/overcoming-maximum-file-path-length-restrictions-in-windows
+                            $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
+                            Write-Verbose ('About to run command: ' + $strCommand)
+                            $null = Invoke-Expression $strCommand
+                            # Restart process without recursion flag
+                            Repair-NTFSPermissionsRecursively $strThisObjectPath $false
+                        } else {
+                            Write-Warning ('The permissions on the folder "' + $strThisObjectPath + '" could not be repaired. Please repair them manually.')
+                        }
+                    }
                 }
             }
         }
@@ -1171,76 +1211,14 @@ function Repair-NTFSPermissionsRecursively {
 
             if ($boolSuccess -eq $false) {
                 # Error occurred probably because the path length is too long
-                $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
-                if ($arrAvailableDriveLetters.Count -gt 0) {
-                    $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strThisObjectPath.Replace('$', '`$') + '"'
-                    Write-Debug ('About to run command: ' + $strCommand)
-                    $null = Invoke-Expression $strCommand
-
-                    #############Get path to drive root
-                    $strTempPathToAdd = '###FAKE###'
-
-                    $doubleSecondsCounter = 0
-                    $boolErrorOccurredUsingDriveLetter = $true
-
-                    # Try Join-Path and sleep for up to 10 seconds until it's successful
-                    while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
-                        if (Test-Path ($strDriveLetterToUse + ':')) {
-                            $strTempPath = $null
-                            $boolSuccess = Join-PathSafely ([ref]$strTempPath) ($strDriveLetterToUse + ':') $strTempPathToAdd
-
-                            if ($boolSuccess -eq $false) {
-                                Start-Sleep 0.2
-                                $doubleSecondsCounter += 0.2
-                            } else {
-                                $boolErrorOccurredUsingDriveLetter = $false
-                            }
-                        } else {
-                            Start-Sleep 0.2
-                            $doubleSecondsCounter += 0.2
-                        }
-                    }
-
-                    if ($boolErrorOccurredUsingDriveLetter -eq $true) {
-                        Write-Error ('Unable to process the path "' + $strThisObjectPath.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
-                    } else {
-                        $strPathSeparator = $strTempPath.Substring($strTempPath.Length - $strTempPathToAdd.Length - ($strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length), $strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length)
-                        $strPathToRootOfDrive = $strDriveLetterToUse + ':' + $strPathSeparator
-                    }
-                    #############Done getting path to drive root
-
-                    if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                        Repair-NTFSPermissionsRecursively $strPathToRootOfDrive
-                    }
-
-                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                    Write-Debug ('About to run command: ' + $strCommand)
-                    $null = Invoke-Expression $strCommand
+                if ($boolAllowRecursiveRun -eq $false) {
+                    Write-Warning ('The path "' + $strPathToFix + '" threw an error when getting child objects - probably because the path is too long. Please shorten it and try again.')
                 } else {
-                    Write-Error ('An error occurred enumerating subfolders and files within the following folder, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
-                }
-            } else {
-                # No error occurred
-                $boolLengthOfChildrenOK = $true
-
-                # Check the length of all child objects first
-                $arrChildObjects | ForEach-Object {
-                    $objDirectoryOrFileInfoChild = $_
-
-                    # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
-                    # (shorter) length limit
-                    if (($objDirectoryOrFileInfoChild.FullName).Length -ge $FOLDERPATHLIMIT) {
-                        $boolLengthOfChildrenOK = $false
-                    }
-                }
-
-                if ($boolLengthOfChildrenOK -eq $false) {
                     $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                     if ($arrAvailableDriveLetters.Count -gt 0) {
                         $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
                         $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strThisObjectPath.Replace('$', '`$') + '"'
-                        Write-Debug ('About to run command: ' + $strCommand)
+                        Write-Verbose ('About to run command: ' + $strCommand)
                         $null = Invoke-Expression $strCommand
 
                         #############Get path to drive root
@@ -1276,19 +1254,91 @@ function Repair-NTFSPermissionsRecursively {
                         #############Done getting path to drive root
 
                         if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive
+                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true
                         }
 
                         $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                        Write-Debug ('About to run command: ' + $strCommand)
+                        Write-Verbose ('About to run command: ' + $strCommand)
                         $null = Invoke-Expression $strCommand
                     } else {
-                        Write-Error ('One of the subfolders or files within the following folder was too long, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
+                        Write-Error ('An error occurred enumerating subfolders and files within the following folder, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
+                    }
+                }
+            } else {
+                # No error occurred
+                $boolLengthOfChildrenOK = $true
+
+                # Check the length of all child objects first
+                $arrChildObjects | ForEach-Object {
+                    $objDirectoryOrFileInfoChild = $_
+
+                    # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
+                    # (shorter) length limit
+                    if (($objDirectoryOrFileInfoChild.FullName).Length -ge $FOLDERPATHLIMIT) {
+                        $boolLengthOfChildrenOK = $false
+                    }
+                }
+
+                if ($boolLengthOfChildrenOK -eq $false) {
+                    if ($boolAllowRecursiveRun -eq $false) {
+                        Write-Error 'The path length of one or more child objects is too long. Please shorten the path length of the child objects and try again.'
+                    } else {
+                        $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
+                        if ($arrAvailableDriveLetters.Count -gt 0) {
+                            $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
+                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strThisObjectPath.Replace('$', '`$') + '"'
+                            Write-Verbose ('About to run command: ' + $strCommand)
+                            $null = Invoke-Expression $strCommand
+
+                            #############Get path to drive root
+                            $strTempPathToAdd = '###FAKE###'
+
+                            $doubleSecondsCounter = 0
+                            $boolErrorOccurredUsingDriveLetter = $true
+
+                            # Try Join-Path and sleep for up to 10 seconds until it's successful
+                            while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
+                                if (Test-Path ($strDriveLetterToUse + ':')) {
+                                    $strTempPath = $null
+                                    $boolSuccess = Join-PathSafely ([ref]$strTempPath) ($strDriveLetterToUse + ':') $strTempPathToAdd
+
+                                    if ($boolSuccess -eq $false) {
+                                        Start-Sleep 0.2
+                                        $doubleSecondsCounter += 0.2
+                                    } else {
+                                        $boolErrorOccurredUsingDriveLetter = $false
+                                    }
+                                } else {
+                                    Start-Sleep 0.2
+                                    $doubleSecondsCounter += 0.2
+                                }
+                            }
+
+                            if ($boolErrorOccurredUsingDriveLetter -eq $true) {
+                                Write-Error ('Unable to process the path "' + $strThisObjectPath.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
+                            } else {
+                                $strPathSeparator = $strTempPath.Substring($strTempPath.Length - $strTempPathToAdd.Length - ($strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length), $strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length)
+                                $strPathToRootOfDrive = $strDriveLetterToUse + ':' + $strPathSeparator
+                            }
+                            #############Done getting path to drive root
+
+                            if ($boolErrorOccurredUsingDriveLetter -eq $false) {
+                                Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true
+                            }
+
+                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
+                            Write-Verbose ('About to run command: ' + $strCommand)
+                            $null = Invoke-Expression $strCommand
+                        } else {
+                            Write-Error ('One of the subfolders or files within the following folder was too long, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
+                        }
                     }
                 } else {
                     $arrChildObjects | ForEach-Object {
                         $objDirectoryOrFileInfoChild = $_
-                        Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName)
+                        if ($boolAllowRecursiveRun -eq $true) {
+                            Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true
+                        }
                     }
                 }
             }
@@ -1296,4 +1346,4 @@ function Repair-NTFSPermissionsRecursively {
     }
 }
 
-Repair-NTFSPermissionsRecursively $strPathToFix
+Repair-NTFSPermissionsRecursively $strPathToFix $true
