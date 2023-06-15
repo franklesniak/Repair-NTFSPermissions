@@ -598,16 +598,16 @@ function Get-AclSafely {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # This needs to be a one-liner for error handling to work!:
-    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']')) { $objThis = Get-Item (($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl $strThisObjectPath }
+    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $objThis = Get-Item ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl $strThisObjectPath }
     # The above one-liner is a messy variant of the following, which had to be
     # converted to one line to prevent PowerShell v3 from throwing errors on the stack
     # when copy-pasted into the shell (despite there not being any apparent error):
     ###################################################################################
     # TODO: Get-Acl is slow if there is latency between the folder structure and the domain controller, probably because of SID lookups. See if there is a way to speed this up without introducing external dependencies.
-    # if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']')) {
+    # if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
     #     # Can't use Get-Acl because Get-Acl doesn't support paths with brackets
     #
-    #     $objThis = Get-Item (($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')) -Force # -Force parameter is required to get hidden items
+    #     $objThis = Get-Item ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
     #
     #     # TODO: GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
     #     $objThisFolderPermission = $objThis.GetAccessControl()
