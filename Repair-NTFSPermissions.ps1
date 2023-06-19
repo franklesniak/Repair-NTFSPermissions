@@ -137,8 +137,7 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.0.20230615.0'
-
+$strThisScriptVersionNumber = [version]'1.0.20230619.0'
 
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
@@ -726,11 +725,16 @@ function Get-ChildItemSafely {
 }
 
 function Repair-NTFSPermissionsRecursively {
-    # Syntax: Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' $true $false
+    # Syntax: Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' 0 $false
 
     $strThisObjectPath = $args[0]
-    $boolAllowRecursiveRun = $args[1]
+    $intRecursionState = $args[1]
     $boolUseGetPathWorkaround = $args[2]
+
+    # $intRecursionState:
+    # 0 = Allow recursion (default)
+    # 1 = Do not allow recursion, but allow ownership to be taken via Set-Acl
+    # 2 = Do not allow recursion, and do not allow ownership to be taken via Set-Acl
 
     $FILEPATHLIMIT = 260
     $FOLDERPATHLIMIT = 248
@@ -742,7 +746,7 @@ function Repair-NTFSPermissionsRecursively {
     # (shorter) length limit
     if ($strThisObjectPath.Length -ge $FOLDERPATHLIMIT) {
         Write-Verbose ($strThisObjectPath + ' is too long.')
-        if ($boolAllowRecursiveRun -eq $false) {
+        if ($intRecursionState -ge 1) {
             Write-Error "Despite attempts to mitigate, the path length of $strThisObjectPath exceeds the maximum length of $FOLDERPATHLIMIT characters."
             return
         } else {
@@ -848,7 +852,7 @@ function Repair-NTFSPermissionsRecursively {
                     if ($boolErrorOccurredUsingDriveLetter -eq $true) {
                         Write-Error ('Unable to process the path "' + $strParentFolder.Replace('$', '`$') + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand)
                     } else {
-                        Repair-NTFSPermissionsRecursively $strNewPath $true $boolUseGetPathWorkaround
+                        Repair-NTFSPermissionsRecursively $strNewPath 0 $boolUseGetPathWorkaround
                     }
 
                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1044,7 +1048,7 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
-                if ($boolAllowRecursiveRun -eq $true) {
+                if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
@@ -1063,7 +1067,7 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
                 }
-                if ($boolAllowRecursiveRun -eq $true) {
+                if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
@@ -1082,7 +1086,7 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
-                if ($boolAllowRecursiveRun -eq $true) {
+                if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
@@ -1101,7 +1105,7 @@ function Repair-NTFSPermissionsRecursively {
                     # Is not a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
                 }
-                if ($boolAllowRecursiveRun -eq $true) {
+                if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
@@ -1225,16 +1229,24 @@ function Repair-NTFSPermissionsRecursively {
                     if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
                         Write-Verbose ('Despite attempting to apply permissions to the folder/file, the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.')
                         # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
-                        if ($boolAllowRecursiveRun -eq $true) {
+                        if ($intRecursionState -eq 0) {
                             # Try taking ownership of the folder/file
 
                             # Take ownership
-                            # TODO: This does not work if $strThisObjectPath is over 260 characters. Look at https://serverfault.com/questions/232986/overcoming-maximum-file-path-length-restrictions-in-windows
                             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
-                            # Restart process without recursion flag
-                            Repair-NTFSPermissionsRecursively $strThisObjectPath $false $boolUseGetPathWorkaround
+                            # Restart process without recursion flag, phase 1
+                            Repair-NTFSPermissionsRecursively $strThisObjectPath 1 $boolUseGetPathWorkaround
+                        } elseif ($intRecursionState -eq 1) {
+                            # Try taking ownership of the folder/file with Set-Acl
+
+                            # Take ownership
+                            $objThisFolderPermission.SetOwner([System.Security.Principal.NTAccount]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls)
+                            # TODO: Create Set-ACLSafely function to suppress errors
+                            Set-Acl -Path $strThisObjectPath -AclObject $objThisFolderPermission
+                            # Restart process without recursion flag, phase 2
+                            Repair-NTFSPermissionsRecursively $strThisObjectPath 2 $boolUseGetPathWorkaround
                         } else {
                             Write-Warning ('The permissions on the folder "' + $strThisObjectPath + '" could not be repaired. Please repair them manually.')
                         }
@@ -1251,7 +1263,7 @@ function Repair-NTFSPermissionsRecursively {
 
             if ($boolSuccess -eq $false) {
                 # Error occurred probably because the path length is too long
-                if ($boolAllowRecursiveRun -eq $false) {
+                if ($intRecursionState -ge 1) {
                     Write-Warning ('The path "' + $strPathToFix + '" threw an error when getting child objects - probably because the path is too long. Please shorten it and try again.')
                 } else {
                     $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
@@ -1327,7 +1339,7 @@ function Repair-NTFSPermissionsRecursively {
                         #############Done getting path to drive root
 
                         if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true $boolUseGetPathWorkaround
+                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive 0 $boolUseGetPathWorkaround
                         }
 
                         $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1358,7 +1370,7 @@ function Repair-NTFSPermissionsRecursively {
                 }
 
                 if ($boolLengthOfChildrenOK -eq $false) {
-                    if ($boolAllowRecursiveRun -eq $false) {
+                    if ($intRecursionState -ge 1) {
                         Write-Error 'The path length of one or more child objects is too long. Please shorten the path length of the child objects and try again.'
                     } else {
                         $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
@@ -1434,7 +1446,7 @@ function Repair-NTFSPermissionsRecursively {
                             #############Done getting path to drive root
 
                             if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                                Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true $boolUseGetPathWorkaround
+                                Repair-NTFSPermissionsRecursively $strPathToRootOfDrive 0 $boolUseGetPathWorkaround
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1452,8 +1464,8 @@ function Repair-NTFSPermissionsRecursively {
                 } else {
                     $arrChildObjects | ForEach-Object {
                         $objDirectoryOrFileInfoChild = $_
-                        if ($boolAllowRecursiveRun -eq $true) {
-                            Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true $boolUseGetPathWorkaround
+                        if ($intRecursionState -eq 0) {
+                            Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) 0 $boolUseGetPathWorkaround
                         }
                     }
                 }
@@ -1462,4 +1474,4 @@ function Repair-NTFSPermissionsRecursively {
     }
 }
 
-Repair-NTFSPermissionsRecursively $strPathToFix $true $false
+Repair-NTFSPermissionsRecursively $strPathToFix 0 $false
