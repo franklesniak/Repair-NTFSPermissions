@@ -463,7 +463,7 @@ function Get-AvailableDriveLetter {
     # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     #endregion License ################################################################
 
-    $versionThisFunction = [version]('1.0.20230615.0')
+    $versionThisFunction = [version]('1.0.20230619.0')
 
     #region Process Input ##########################################################
     if ($DoNotConsiderMappedDriveLettersAsInUse.IsPresent -eq $true) {
@@ -485,6 +485,8 @@ function Get-AvailableDriveLetter {
     }
     #endregion Process Input ##########################################################
 
+    $VerbosePreferenceAtStartOfFunction = $VerbosePreference
+
     if ((Test-Windows) -eq $true) {
 
         $arrAllPossibleLetters = 65..90 | ForEach-Object { [char]$_ }
@@ -492,6 +494,7 @@ function Get-AvailableDriveLetter {
         $versionPS = Get-PSVersion
 
         If ($versionPS.Major -ge 3) {
+            $VerbosePreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
             $arrUsedLogicalDriveLetters = Get-CimInstance -ClassName 'Win32_LogicalDisk' |
                 ForEach-Object { $_.DeviceID } | Where-Object { $_.Length -eq 2 } |
                 Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
@@ -500,8 +503,10 @@ function Get-AvailableDriveLetter {
             # "C:" second-to-last bit of pipeline strips off the ':', leaving just the capital drive
             # letter last bit of pipeline ensure that the drive letter is actually a letter; addresses
             # legacy Netware edge cases
+            $VerbosePreference = $VerbosePreferenceAtStartOfFunction
 
             if ($boolExcludeMappedDriveLetters -eq $true) {
+                $VerbosePreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
                 $arrUsedMappedDriveLetters = Get-CimInstance -ClassName 'Win32_NetworkConnection' |
                     ForEach-Object { $_.LocalName } | Where-Object { $_.Length -eq 2 } |
                     Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
@@ -511,10 +516,12 @@ function Get-AvailableDriveLetter {
                 # second-to-last bit of pipeline strips off the ':', leaving just the capital drive letter
                 # last bit of pipeline ensure that the drive letter is actually a letter; addresses legacy
                 # Netware edge cases
+                $VerbosePreference = $VerbosePreferenceAtStartOfFunction
             } else {
                 $arrUsedMappedDriveLetters = $null
             }
         } else {
+            $VerbosePreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
             $arrUsedLogicalDriveLetters = Get-WmiObject -Class 'Win32_LogicalDisk' |
                 ForEach-Object { $_.DeviceID } | Where-Object { $_.Length -eq 2 } |
                 Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
@@ -523,8 +530,10 @@ function Get-AvailableDriveLetter {
             # "C:" second-to-last bit of pipeline strips off the ':', leaving just the capital drive
             # letter last bit of pipeline ensure that the drive letter is actually a letter; addresses
             # legacy Netware edge cases
+            $VerbosePreference = $VerbosePreferenceAtStartOfFunction
 
             if ($boolExcludeMappedDriveLetters -eq $true) {
+                $VerbosePreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
                 $arrUsedMappedDriveLetters = Get-WmiObject -Class 'Win32_NetworkConnection' |
                     ForEach-Object { $_.LocalName } | Where-Object { $_.Length -eq 2 } |
                     Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
@@ -534,6 +543,7 @@ function Get-AvailableDriveLetter {
                 # second-to-last bit of pipeline strips off the ':', leaving just the capital drive letter
                 # last bit of pipeline ensure that the drive letter is actually a letter; addresses legacy
                 # Netware edge cases
+                $VerbosePreference = $VerbosePreferenceAtStartOfFunction
             } else {
                 $arrUsedMappedDriveLetters = $null
             }
@@ -1043,10 +1053,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for administrators
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + '":(NP)(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + '":(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1062,10 +1072,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for SYSTEM
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + '":(NP)(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + '":(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1081,10 +1091,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for additional administrator
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + '":(NP)(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + '":(F)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1100,10 +1110,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for additional read only account
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + '":(NP)(RX)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(RX)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + '":(RX)'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
                 }
                 if ($intRecursionState -le 1) {
                     $strCommand += ' 2>&1'
