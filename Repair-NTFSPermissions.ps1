@@ -726,10 +726,11 @@ function Get-ChildItemSafely {
 }
 
 function Repair-NTFSPermissionsRecursively {
-    # Syntax: Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate'
+    # Syntax: Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' $true $false
 
     $strThisObjectPath = $args[0]
     $boolAllowRecursiveRun = $args[1]
+    $boolUseGetPathWorkaround = $args[2]
 
     $FILEPATHLIMIT = 260
     $FOLDERPATHLIMIT = 248
@@ -740,6 +741,7 @@ function Repair-NTFSPermissionsRecursively {
     # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
     # (shorter) length limit
     if ($strThisObjectPath.Length -ge $FOLDERPATHLIMIT) {
+        Write-Verbose ($strThisObjectPath + ' is too long.')
         if ($boolAllowRecursiveRun -eq $false) {
             Write-Error "Despite attempts to mitigate, the path length of $strThisObjectPath exceeds the maximum length of $FOLDERPATHLIMIT characters."
             return
@@ -789,6 +791,11 @@ function Repair-NTFSPermissionsRecursively {
 
                     $strRemainderOfPath = $strThisObjectPath.Substring($strParentFolder.Length + 1, $strThisObjectPath.Length - $strParentFolder.Length - 1)
 
+                    if ($boolUseGetPathWorkaround -eq $true) {
+                        # Use workaround for drives not refreshing in current PowerShell session
+                        Get-PSDrive | Out-Null
+                    }
+
                     $doubleSecondsCounter = 0
                     $boolErrorOccurredUsingDriveLetter = $true
 
@@ -810,15 +817,48 @@ function Repair-NTFSPermissionsRecursively {
                         }
                     }
 
+                    if ($boolErrorOccurredUsingDriveLetter -eq $true -and $boolUseGetPathWorkaround -eq $false) {
+                        # Try workaround for drives not refreshing in current PowerShell session
+                        Get-PSDrive | Out-Null
+
+                        # Restart counter and try waiting again
+                        $doubleSecondsCounter = 0
+                        $boolErrorOccurredUsingDriveLetter = $true
+
+                        # Try Join-Path and sleep for up to 10 seconds until it's successful
+                        while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
+                            if (Test-Path ($strDriveLetterToUse + ':')) {
+                                $strJoinedPath = $null
+                                $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) ($strDriveLetterToUse + ":") $strRemainderOfPath
+
+                                if ($boolSuccess -eq $false) {
+                                    Start-Sleep 0.2
+                                    $doubleSecondsCounter += 0.2
+                                } else {
+                                    $boolErrorOccurredUsingDriveLetter = $false
+                                    $boolUseGetPathWorkaround = $true
+                                }
+                            } else {
+                                Start-Sleep 0.2
+                                $doubleSecondsCounter += 0.2
+                            }
+                        }
+                    }
+
                     if ($boolErrorOccurredUsingDriveLetter -eq $true) {
-                        Write-Error ('Unable to process the path "' + $strParentFolder.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
+                        Write-Error ('Unable to process the path "' + $strParentFolder.Replace('$', '`$') + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand)
                     } else {
-                        Repair-NTFSPermissionsRecursively $strNewPath $true
+                        Repair-NTFSPermissionsRecursively $strNewPath $true $boolUseGetPathWorkaround
                     }
 
                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
                     Write-Verbose ('About to run command: ' + $strCommand)
                     $null = Invoke-Expression $strCommand
+
+                    if ($boolUseGetPathWorkaround -eq $true) {
+                        # Use workaround for drives not refreshing in current PowerShell session
+                        Get-PSDrive | Out-Null
+                    }
                 } else {
                     Write-Error ('Cannot process the following path because it is too long and there are no drive letters available to use as a mount point: ' + $strThisObjectPath)
                 }
@@ -1194,7 +1234,7 @@ function Repair-NTFSPermissionsRecursively {
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
                             # Restart process without recursion flag
-                            Repair-NTFSPermissionsRecursively $strThisObjectPath $false
+                            Repair-NTFSPermissionsRecursively $strThisObjectPath $false $boolUseGetPathWorkaround
                         } else {
                             Write-Warning ('The permissions on the folder "' + $strThisObjectPath + '" could not be repaired. Please repair them manually.')
                         }
@@ -1224,6 +1264,11 @@ function Repair-NTFSPermissionsRecursively {
                         #############Get path to drive root
                         $strTempPathToAdd = '###FAKE###'
 
+                        if ($boolUseGetPathWorkaround -eq $true) {
+                            # Use workaround for drives not refreshing in current PowerShell session
+                            Get-PSDrive | Out-Null
+                        }
+
                         $doubleSecondsCounter = 0
                         $boolErrorOccurredUsingDriveLetter = $true
 
@@ -1245,8 +1290,36 @@ function Repair-NTFSPermissionsRecursively {
                             }
                         }
 
+                        if ($boolErrorOccurredUsingDriveLetter -eq $true -and $boolUseGetPathWorkaround -eq $false) {
+                            # Try workaround for drives not refreshing in current PowerShell session
+                            Get-PSDrive | Out-Null
+
+                            # Restart counter and try waiting again
+                            $doubleSecondsCounter = 0
+                            $boolErrorOccurredUsingDriveLetter = $true
+
+                            # Try Join-Path and sleep for up to 10 seconds until it's successful
+                            while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
+                                if (Test-Path ($strDriveLetterToUse + ':')) {
+                                    $strJoinedPath = $null
+                                    $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) ($strDriveLetterToUse + ":") $strRemainderOfPath
+
+                                    if ($boolSuccess -eq $false) {
+                                        Start-Sleep 0.2
+                                        $doubleSecondsCounter += 0.2
+                                    } else {
+                                        $boolErrorOccurredUsingDriveLetter = $false
+                                        $boolUseGetPathWorkaround = $true
+                                    }
+                                } else {
+                                    Start-Sleep 0.2
+                                    $doubleSecondsCounter += 0.2
+                                }
+                            }
+                        }
+
                         if ($boolErrorOccurredUsingDriveLetter -eq $true) {
-                            Write-Error ('Unable to process the path "' + $strThisObjectPath.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
+                            Write-Error ('Unable to process the path "' + $strThisObjectPath.Replace('$', '`$') + '" because running the following command to mitigate path length failed to produce a usable drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand)
                         } else {
                             $strPathSeparator = $strTempPath.Substring($strTempPath.Length - $strTempPathToAdd.Length - ($strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length), $strTempPath.Length - $strTempPathToAdd.Length - ($strDriveLetterToUse + ':').Length)
                             $strPathToRootOfDrive = $strDriveLetterToUse + ':' + $strPathSeparator
@@ -1254,12 +1327,17 @@ function Repair-NTFSPermissionsRecursively {
                         #############Done getting path to drive root
 
                         if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true
+                            Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true $boolUseGetPathWorkaround
                         }
 
                         $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
                         Write-Verbose ('About to run command: ' + $strCommand)
                         $null = Invoke-Expression $strCommand
+
+                        if ($boolUseGetPathWorkaround -eq $true) {
+                            # Use workaround for drives not refreshing in current PowerShell session
+                            Get-PSDrive | Out-Null
+                        }
                     } else {
                         Write-Error ('An error occurred enumerating subfolders and files within the following folder, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
                     }
@@ -1293,6 +1371,11 @@ function Repair-NTFSPermissionsRecursively {
                             #############Get path to drive root
                             $strTempPathToAdd = '###FAKE###'
 
+                            if ($boolUseGetPathWorkaround -eq $true) {
+                                # Use workaround for drives not refreshing in current PowerShell session
+                                Get-PSDrive | Out-Null
+                            }
+
                             $doubleSecondsCounter = 0
                             $boolErrorOccurredUsingDriveLetter = $true
 
@@ -1314,6 +1397,34 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                             }
 
+                            if ($boolErrorOccurredUsingDriveLetter -eq $true -and $boolUseGetPathWorkaround -eq $false) {
+                                # Try workaround for drives not refreshing in current PowerShell session
+                                Get-PSDrive | Out-Null
+
+                                # Restart counter and try waiting again
+                                $doubleSecondsCounter = 0
+                                $boolErrorOccurredUsingDriveLetter = $true
+
+                                # Try Join-Path and sleep for up to 10 seconds until it's successful
+                                while ($doubleSecondsCounter -le 10 -and $boolErrorOccurredUsingDriveLetter -eq $true) {
+                                    if (Test-Path ($strDriveLetterToUse + ':')) {
+                                        $strJoinedPath = $null
+                                        $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) ($strDriveLetterToUse + ":") $strRemainderOfPath
+
+                                        if ($boolSuccess -eq $false) {
+                                            Start-Sleep 0.2
+                                            $doubleSecondsCounter += 0.2
+                                        } else {
+                                            $boolErrorOccurredUsingDriveLetter = $false
+                                            $boolUseGetPathWorkaround = $true
+                                        }
+                                    } else {
+                                        Start-Sleep 0.2
+                                        $doubleSecondsCounter += 0.2
+                                    }
+                                }
+                            }
+
                             if ($boolErrorOccurredUsingDriveLetter -eq $true) {
                                 Write-Error ('Unable to process the path "' + $strThisObjectPath.Replace('$', '`$') + '" because running the following command to mitigate path length failed: ' + $strCommand)
                             } else {
@@ -1323,12 +1434,17 @@ function Repair-NTFSPermissionsRecursively {
                             #############Done getting path to drive root
 
                             if ($boolErrorOccurredUsingDriveLetter -eq $false) {
-                                Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true
+                                Repair-NTFSPermissionsRecursively $strPathToRootOfDrive $true $boolUseGetPathWorkaround
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
+
+                            if ($boolUseGetPathWorkaround -eq $true) {
+                                # Use workaround for drives not refreshing in current PowerShell session
+                                Get-PSDrive | Out-Null
+                            }
                         } else {
                             Write-Error ('One of the subfolders or files within the following folder was too long, and a mount point could not be created to compensate because there are no drive letters available: ' + $strThisObjectPath)
                         }
@@ -1337,7 +1453,7 @@ function Repair-NTFSPermissionsRecursively {
                     $arrChildObjects | ForEach-Object {
                         $objDirectoryOrFileInfoChild = $_
                         if ($boolAllowRecursiveRun -eq $true) {
-                            Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true
+                            Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true $boolUseGetPathWorkaround
                         }
                     }
                 }
@@ -1346,4 +1462,4 @@ function Repair-NTFSPermissionsRecursively {
     }
 }
 
-Repair-NTFSPermissionsRecursively $strPathToFix $true
+Repair-NTFSPermissionsRecursively $strPathToFix $true $false
