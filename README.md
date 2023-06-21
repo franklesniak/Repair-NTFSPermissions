@@ -40,7 +40,8 @@ This is BAD!
 
 Additionally, clicking on a folder that you do not have access to - or one that you have access to via your administrative privileges when User Account Control (UAC) is enabled - will result in a screen like this:
 ![This shouldn't steamroll permissions, but it's also bad](./Docs/Img/About-To-Steamroll-Permissions.png)
-You should **not** click Continue, because doing so will modify the existing permissions and grant your account, specifically, permissions to the content. This is not desirable in most cases and can take a while for permission assignment to complete.
+You should **not** click Continue, because doing so will modify the existing permissions and grant your account, specifically, permissions to the content.
+This is not desirable in most cases and can take a while for permission assignment to complete.
 
 ## Solution
 
@@ -55,7 +56,8 @@ This would be very cumbersome and time-consuming!
 
 I created Repair-NTFSPermissions.ps1 to automate the process of ensuring Administrators and the SYSTEM account have full control of the specified folder and all child objects (subfolders and files).
 
-The script does this by scanning the existing permissions. If permissions cannot be read, it takes ownership of just the current object on behalf of Administrators, then it tries to read the object's permissions again.
+The script does this by scanning the existing permissions.
+If permissions cannot be read, it takes ownership of just the current object on behalf of Administrators, then it tries to read the object's permissions again.
 If Administrators and SYSTEM already have permission, then no action is taken and the script continues scanning subfolders and files.
 
 If the script finds that Administrators or SYSTEM are missing Full Control permission, then it grants them to just the current object using icacls.
@@ -66,13 +68,15 @@ If not, the script takes ownership of just the current object and tries again.
 And if it still fails, it takes ownership via an alternative method and tries again.
 
 Additionally, my script handles long paths by first attempting a drive substitution (via subst.exe).
-If that fails for any reason, it uses a symbolic link instead. When processing of a long path is completed, the script cleans up the drive substitution or symbolic link.
+If that fails for any reason, it uses a symbolic link instead.
+When processing of a long path is completed, the script cleans up the drive substitution or symbolic link.
 
 ## Requirements
 
 The script requires PowerShell 2.0 or above - but it can be made to work on PowerShell 1.0 with some modifications (removal of comment-based help, parameters, and instead hard-coding the parameters to a variable assignment).
 
-The script must be run with administrative rights. Open PowerShell as an administrator, then run the script.
+The script must be run with administrative rights.
+Open PowerShell as an administrator, then run the script.
 
 You also may need to disable the script execution policy on your system.
 One way to do this is:
