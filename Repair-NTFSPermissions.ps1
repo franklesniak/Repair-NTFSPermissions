@@ -1016,7 +1016,7 @@ function Repair-NTFSPermissionsRecursively {
                 $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                 if ($arrAvailableDriveLetters.Count -gt 0) {
                     $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strFolderTarget.Replace('$', '`$') + '"'
+                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                     Write-Verbose ('About to run command: ' + $strCommand)
                     $null = Invoke-Expression $strCommand
 
@@ -1067,7 +1067,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         # Need to use mklink command in command prompt instead
                         # TODO: Test this with a path containing a dollar sign ($)
-                        $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strFolderTarget.Replace('$', '`$') + '"'
+                        $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                         Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                         $null = Invoke-Expression $strCommand
                     }
@@ -1124,7 +1124,7 @@ function Repair-NTFSPermissionsRecursively {
             # Error occurred reading the ACL
 
             # Take ownership
-            $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
+            $strCommand = 'C:\Windows\System32\takeown.exe /F "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /A'
             Write-Verbose ('About to run command: ' + $strCommand)
             $null = Invoke-Expression $strCommand
 
@@ -1159,7 +1159,7 @@ function Repair-NTFSPermissionsRecursively {
                 # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
 
                 # Take ownership
-                $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
+                $strCommand = 'C:\Windows\System32\takeown.exe /F "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /A'
                 Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
 
@@ -1344,10 +1344,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for administrators
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intIterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1363,10 +1363,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for SYSTEM
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intIterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1382,10 +1382,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for additional administrator
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
                 }
                 if ($intIterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1401,10 +1401,10 @@ function Repair-NTFSPermissionsRecursively {
                 # Add ACE for additional read only account
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(RX)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(RX)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strThisObjectPath.Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
                 }
                 if ($intIterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -1574,7 +1574,7 @@ function Repair-NTFSPermissionsRecursively {
                             # Try taking ownership of the folder/file
 
                             # Take ownership
-                            $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strThisObjectPath.Replace('$', '`$') + '" /A'
+                            $strCommand = 'C:\Windows\System32\takeown.exe /F "' + ($strThisObjectPath.Replace('`', '``')).Replace('$', '`$') + '" /A'
                             $strCommand += ' 2>&1'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
@@ -1644,7 +1644,7 @@ function Repair-NTFSPermissionsRecursively {
                         $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                         if ($arrAvailableDriveLetters.Count -gt 0) {
                             $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strFolderTarget.Replace('$', '`$') + '"'
+                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
 
@@ -1695,7 +1695,7 @@ function Repair-NTFSPermissionsRecursively {
                             } else {
                                 # Need to use mklink command in command prompt instead
                                 # TODO: Test this with a path containing a dollar sign ($)
-                                $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strFolderTarget.Replace('$', '`$') + '"'
+                                $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                                 Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
                             }
@@ -1773,7 +1773,7 @@ function Repair-NTFSPermissionsRecursively {
                             $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                             if ($arrAvailableDriveLetters.Count -gt 0) {
                                 $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                                $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strFolderTarget.Replace('$', '`$') + '"'
+                                $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                                 Write-Verbose ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
 
@@ -1824,7 +1824,7 @@ function Repair-NTFSPermissionsRecursively {
                                 } else {
                                     # Need to use mklink command in command prompt instead
                                     # TODO: Test this with a path containing a dollar sign ($)
-                                    $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strFolderTarget.Replace('$', '`$') + '"'
+                                    $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + ($strFolderTarget.Replace('`', '``')).Replace('$', '`$') + '"'
                                     Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
                                 }
