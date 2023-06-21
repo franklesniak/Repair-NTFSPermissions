@@ -39,7 +39,9 @@ Chances are that you do not have the previous permissions documented, so you won
 This is BAD!
 
 Additionally, clicking on a folder that you do not have access to - or one that you have access to via your administrative privileges when User Account Control (UAC) is enabled - will result in a screen like this:
+
 ![This shouldn't steamroll permissions, but it's also bad](./Docs/Img/About-To-Steamroll-Permissions.png)
+
 You should **not** click Continue, because doing so will modify the existing permissions and grant your account, specifically, permissions to the content.
 This is not desirable in most cases and can take a while for permission assignment to complete.
 
