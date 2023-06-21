@@ -610,7 +610,7 @@ function Get-AclSafely {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # This needs to be a one-liner for error handling to work!:
-    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $objThis = Get-Item ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl $strThisObjectPath }
+    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; $objThisFolderPermission = $objThis.GetAccessControl() } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
     # The above one-liner is a messy variant of the following, which had to be
     # converted to one line to prevent PowerShell v3 from throwing errors on the stack
     # when copy-pasted into the shell (despite there not being any apparent error):
@@ -618,14 +618,22 @@ function Get-AclSafely {
     # TODO: Get-Acl is slow if there is latency between the folder structure and the domain controller, probably because of SID lookups. See if there is a way to speed this up without introducing external dependencies.
     # if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
     #     # Can't use Get-Acl because Get-Acl doesn't support paths with brackets
-    #
-    #     $objThis = Get-Item ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
-    #
-    #     # TODO: GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-    #     $objThisFolderPermission = $objThis.GetAccessControl()
+    #     $versionPS = Get-PSVersion
+    #     if ($versionPS.Major -ge 3) {
+    #         # PowerShell v3 and newer supports -LiteralPath
+    #         $objThis = Get-Item -LiteralPath $strThisObjectPath -Force # -Force parameter is required to get hidden items
+    #         $objThisFolderPermission = $objThis.GetAccessControl()
+    #     } elseif ($versionPS.Major -eq 2) {
+    #         $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
+    #         $objThisFolderPermission = $objThis.GetAccessControl()
+    #     } else {
+    #         # PowerShell v1
+    #         # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
+    #         $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``'))
+    #     }
     # } else {
     #     # No square brackets; use Get-Acl
-    #     $objThisFolderPermission = Get-Acl $strThisObjectPath
+    #     $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
     # }
     ###################################################################################
 
@@ -1136,7 +1144,14 @@ function Repair-NTFSPermissionsRecursively {
                 # The object returned from Get-Acl is not copy-able on PowerShell 1.0
                 # Not sure why...
                 # So, we need to get the ACL directly and hope that we don't have an error this time
-                $objThisFolderPermission = Get-Acl
+                if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
+                    # PowerShell v1
+                    # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
+                    $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``'))
+                } else {
+                    # No square brackets; use Get-Acl
+                    $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
+                }
             }
 
             if ($null -eq $objThisFolderPermission) {
@@ -1165,8 +1180,20 @@ function Repair-NTFSPermissionsRecursively {
 
         if ($boolCriticalErrorOccurred -eq $false) {
             if ($null -eq $objThis) {
-                # -Force parameter is required to get hidden items
-                $objThis = Get-Item $strThisObjectPath -Force
+                if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
+                    # Need to escape characters
+                    if ($versionPS.Major -ge 3) {
+                        # PowerShell v3 and newer supports -LiteralPath
+                        # -Force parameter is required to get hidden items
+                        $objThis = Get-Item -LiteralPath $strThisObjectPath -Force
+                    } else {
+                        # -Force parameter is required to get hidden items
+                        $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force
+                    }
+                } else {
+                    # -Force parameter is required to get hidden items
+                    $objThis = Get-Item $strThisObjectPath -Force
+                }
             }
 
             if ($null -eq $objThisFolderPermission) {
