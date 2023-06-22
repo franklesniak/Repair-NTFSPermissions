@@ -939,8 +939,9 @@ function Repair-NTFSPermissionsRecursively {
     $intIterativeRepairState = $args[2]
     $boolUseGetPSDriveWorkaround = $args[3]
     $strLastSubstitutedPath = $args[4]
+    $boolUseTemporaryPathLenghIgnoringAltMode = $args[5]
 
-    $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath
+    $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode
     Write-Verbose $strVerboseMessage
 
     # $intIterativeRepairState:
@@ -1029,7 +1030,7 @@ function Repair-NTFSPermissionsRecursively {
                         Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                         $intReturnCode = -1
                     } else {
-                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':')
+                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
                     }
 
                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1082,7 +1083,7 @@ function Repair-NTFSPermissionsRecursively {
                         Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                         $intReturnCode = -2
                     } else {
-                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID)
+                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
                     }
 
                     if ($intReturnCode -lt 0) {
@@ -1588,7 +1589,7 @@ function Repair-NTFSPermissionsRecursively {
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
                             # Restart process without recursion flag, phase 1
-                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 1 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 1 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -1605,7 +1606,7 @@ function Repair-NTFSPermissionsRecursively {
                             # TODO: Create Set-ACLSafely function to suppress errors
                             Set-Acl -Path $strThisObjectPath -AclObject $objThisFolderPermission
                             # Restart process without recursion flag, phase 2
-                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 2 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 2 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -1666,7 +1667,7 @@ function Repair-NTFSPermissionsRecursively {
                                 Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                 $intReturnCode = -1
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':')
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1719,7 +1720,7 @@ function Repair-NTFSPermissionsRecursively {
                                 Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                 $intReturnCode = -2
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID)
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
                             }
 
                             if ($intReturnCode -lt 0) {
@@ -1797,7 +1798,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                     $intReturnCode = -1
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':')
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1850,7 +1851,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                     $intReturnCode = -2
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID)
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
                                 }
 
                                 if ($intReturnCode -lt 0) {
@@ -1883,7 +1884,7 @@ function Repair-NTFSPermissionsRecursively {
                         # The length of all child objects was OK
                         $arrChildObjects | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
-                            $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath
+                            $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
 
                             if ($intReturnCode -ne 0) {
                                 Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
@@ -1898,7 +1899,7 @@ function Repair-NTFSPermissionsRecursively {
     return $intFunctionReturn
 }
 
-$intReturnCode = Repair-NTFSPermissionsRecursively $strPathToFix $true 0 $false ''
+$intReturnCode = Repair-NTFSPermissionsRecursively $strPathToFix $true 0 $false '' $false
 if ($intReturnCode -eq 0) {
     Write-Host ('Successfully processed path: ' + $strPathToFix)
 } else {
