@@ -140,7 +140,7 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.0.20230619.0'
+$strThisScriptVersionNumber = [version]'1.0.20230622.0'
 
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
@@ -960,7 +960,7 @@ function Repair-NTFSPermissionsRecursively {
 
     # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
     # (shorter) length limit
-    if ($strThisObjectPath.Length -ge $FOLDERPATHLIMIT) {
+    if ($strThisObjectPath.Length -ge $FOLDERPATHLIMIT -and $boolUseTemporaryPathLenghIgnoringAltMode -ne $true) {
         Write-Verbose ($strThisObjectPath + ' is too long.')
         if ($intIterativeRepairState -ge 1) {
             Write-Error ('Despite attempts to mitigate, the path length of ' + $strThisObjectPath + ' exceeds the maximum length of ' + $FOLDERPATHLIMIT + ' characters.')
@@ -1003,122 +1003,174 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolTenablePathFound) {
-                $strRemainderOfPath = $strThisObjectPath.Substring($strParentFolder.Length + 1, $strThisObjectPath.Length - $strParentFolder.Length - 1)
-
-                $strFolderTarget = $strParentFolder
-                $strChildFolderOfTarget = $strRemainderOfPath
-
-                #region Mitigate Path Length with Drive Substitution ###############
-                # Inputs:
-                # $strFolderTarget
-                # $strChildFolderOfTarget
-
-                $boolSubstWorked = $false
-                $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
-                if ($arrAvailableDriveLetters.Count -gt 0) {
-                    $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
-                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
-                    Write-Verbose ('About to run command: ' + $strCommand)
-                    $null = Invoke-Expression $strCommand
-
-                    # Confirm the path is ready
-                    $strJoinedPath = ''
-                    $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
-
-                    if ($boolPathAvailable -eq $false) {
-                        Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
-                        $intReturnCode = -1
-                    } else {
-                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
-                    }
-
-                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                    Write-Verbose ('About to run command: ' + $strCommand)
-                    $null = Invoke-Expression $strCommand
-
-                    if ($boolUseGetPSDriveWorkaround -eq $true) {
-                        # Use workaround for drives not refreshing in current PowerShell session
-                        Get-PSDrive | Out-Null
-                    }
-
-                    if ($intReturnCode -eq 0) {
-                        $boolSubstWorked = $true
-                    }
-                }
-                #endregion Mitigate Path Length with Drive Substitution ###############
-
-                #region Mitigate Path Length with Symbolic Link ####################
-                # Inputs:
-                # $strFolderTarget
-                # $strChildFolderOfTarget
-
-                # If a substituted drive failed, try a symbolic link instead
-                $boolSymbolicLinkWorked = $false
-                if ($boolSubstWorked -eq $false) {
-                    # Use a GUID to avoid name collisions
-                    $strGUID = [System.Guid]::NewGuid().ToString()
-
-                    # Create the symbolic link
-                    $versionPS = Get-PSVersion
-                    if ($versionPS -ge ([version]'5.0')) {
-                        # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strGUID + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
-                        # TODO: Test this with a path containing a dollar sign ($)
-                        New-Item -ItemType SymbolicLink -Path ('C:\' + $strGUID) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
-                    } else {
-                        # Need to use mklink command in command prompt instead
-                        # TODO: Test this with a path containing a dollar sign ($)
-                        $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
-                        $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strEscapedPathForInvokeExpression + '"'
-                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
-                        $null = Invoke-Expression $strCommand
-                    }
-
-                    # Confirm the path is ready
-                    $strJoinedPath = ''
-                    $boolPathAvailable = Wait-PathToBeReady -Path ('C:\' + $strGUID) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
-
-                    if ($boolErrorOccurredUsingNewPath -eq $true) {
-                        Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
-                        $intReturnCode = -2
-                    } else {
-                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
-                    }
-
-                    if ($intReturnCode -lt 0) {
-                        # -2 if drive substitution and symbolic link failed
+                if ($strParentFolder -eq $strLastSubstitutedPath) {
+                    # Don't attempt another substitution since we already did that
+                    #
+                    # We are not in temporary path length ignoring mode yet, so try
+                    # again with temporary path length ignoring mode enabled and
+                    # recursion turned off
+                    Write-Verbose ('The path length of item "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
+                    $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                    $intFunctionReturn = $intReturnCode
+                    return $intFunctionReturn
+                } else {
+                    if ($strParentFolder.Length -le 3) {
+                        # We are already working with the shortest possible path; no
+                        # need to try a substitution
+                        #
+                        # We are not in temporary path length ignoring mode yet, so try
+                        # again with temporary path length ignoring mode enabled and
+                        # recursion turned off
+                        Write-Verbose ('The path length of item "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.')
+                        $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
                         $intFunctionReturn = $intReturnCode
                         return $intFunctionReturn
-                    } elseif ($intReturnCode -eq 0) {
-                        $boolSymbolicLinkWorked = $true
+                    } else {
+                        $strRemainderOfPath = $strThisObjectPath.Substring($strParentFolder.Length + 1, $strThisObjectPath.Length - $strParentFolder.Length - 1)
+
+                        $strFolderTarget = $strParentFolder
+                        $strChildFolderOfTarget = $strRemainderOfPath
+
+                        #region Mitigate Path Length with Drive Substitution ###############
+                        # Inputs:
+                        # $strFolderTarget
+                        # $strChildFolderOfTarget
+
+                        $boolSubstWorked = $false
+                        $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
+                        if ($arrAvailableDriveLetters.Count -gt 0) {
+                            $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
+                            $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
+                            Write-Verbose ('About to run command: ' + $strCommand)
+                            $null = Invoke-Expression $strCommand
+
+                            # Confirm the path is ready
+                            $strJoinedPath = ''
+                            $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                            if ($boolPathAvailable -eq $false) {
+                                Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
+                                $intReturnCode = -1
+                            } else {
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false
+                            }
+
+                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
+                            Write-Verbose ('About to run command: ' + $strCommand)
+                            $null = Invoke-Expression $strCommand
+
+                            if ($boolUseGetPSDriveWorkaround -eq $true) {
+                                # Use workaround for drives not refreshing in current PowerShell session
+                                Get-PSDrive | Out-Null
+                            }
+
+                            if ($intReturnCode -eq 0) {
+                                $boolSubstWorked = $true
+                            }
+                        }
+                        #endregion Mitigate Path Length with Drive Substitution ###############
+
+                        #region Mitigate Path Length with Symbolic Link ####################
+                        # Inputs:
+                        # $strFolderTarget
+                        # $strChildFolderOfTarget
+
+                        # If a substituted drive failed, try a symbolic link instead
+                        $boolSymbolicLinkWorked = $false
+                        if ($boolSubstWorked -eq $false) {
+                            $boolSymbolicLinkTargetFound = $false
+                            $strSymbolicLinkFolderName = ''
+                            if ($strFolderTarget.Length -gt 35) {
+                                # Use a GUID to avoid name collisions
+                                $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
+                                $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
+                                $boolSymbolicLinkTargetFound = $true
+                            } elseif ($strFolderTarget.Length -gt 5) {
+                                # Use a single character folder path to keep the name as short as possible
+                                for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
+                                    $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
+                                    $strTestPath = Join-Path 'C:' $strPossibleSymbolicLinkFolder
+                                    if ((Test-Path $strTestPath) -eq $false) {
+                                        # This path is available
+                                        $strSymbolicLinkFolderName = $strPossibleSymbolicLinkFolder
+                                        $boolSymbolicLinkTargetFound = $true
+                                        break
+                                    }
+                                }
+                            } else {
+                                # The path is already short enough; cannot create a symbolic link
+                                # $boolSymbolicLinkTargetFound = $false
+                            }
+
+                            if ($boolSymbolicLinkTargetFound -eq $true) {
+                                # Create the symbolic link
+                                $versionPS = Get-PSVersion
+                                if ($versionPS -ge ([version]'5.0')) {
+                                    # PowerShell 5.0 and newer can make symbolic links in PowerShell
+                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                    # TODO: Test this with a path containing a dollar sign ($)
+                                    New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                } else {
+                                    # Need to use mklink command in command prompt instead
+                                    # TODO: Test this with a path containing a dollar sign ($)
+                                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                    $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
+                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                    $null = Invoke-Expression $strCommand
+                                }
+
+                                # Confirm the path is ready
+                                $strJoinedPath = ''
+                                $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                if ($boolErrorOccurredUsingNewPath -eq $true) {
+                                    Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                    $intReturnCode = -2
+                                } else {
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                }
+
+                                if ($intReturnCode -lt 0) {
+                                    # -2 if drive substitution and symbolic link failed
+                                    $intFunctionReturn = $intReturnCode
+                                    return $intFunctionReturn
+                                } elseif ($intReturnCode -eq 0) {
+                                    $boolSymbolicLinkWorked = $true
+                                }
+
+                                # Remove Symbolic Link
+                                Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                # TODO: Build error handling for this deletion:
+                                (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
+
+                                if ($boolUseGetPSDriveWorkaround -eq $true) {
+                                    # Use workaround for drives not refreshing in current PowerShell session
+                                    Get-PSDrive | Out-Null
+                                }
+                            }
+                        }
+                        #endregion Mitigate Path Length with Symbolic Link ####################
+
+                        if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
+                            Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $strThisObjectPath)
+                            $intFunctionReturn = -3
+                            return $intFunctionReturn
+                        }
                     }
-
-                    # Remove Symbolic Link
-                    Write-Verbose ('Removing symbolic link: ' + ('C:\' + $strGUID))
-                    # TODO: Build error handling for this deletion:
-                    (Get-Item ('C:\' + $strGUID)).Delete()
-
-                    if ($boolUseGetPSDriveWorkaround -eq $true) {
-                        # Use workaround for drives not refreshing in current PowerShell session
-                        Get-PSDrive | Out-Null
-                    }
-                }
-                #endregion Mitigate Path Length with Symbolic Link ####################
-
-                if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
-                    Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $strThisObjectPath)
-                    $intFunctionReturn = -3
-                    return $intFunctionReturn
                 }
             } elseif ($boolPossibleAttemptsExceeded -eq $true) {
                 Write-Error ('Cannot process the following path because it contains no parent folder element that is of an acceptable length with which to perform drive substitution or creation of a symbolic link: ' + $strThisObjectPath)
                 $intFunctionReturn = -4
                 return $intFunctionReturn
+            } else {
+                Write-Error ('While working on the path "' + $strThisObjectPath + '", the path was too long, and an acceptable parent folder element with which path substitution should be performed could not be found. This is unexpected.')
+                $intFunctionReturn = -10
+                return $intFunctionReturn
             }
         }
     } else {
-        # Path is not too long
+        # Path is not too long, or we are in "TemporaryPathLenghIgnoringAltMode"
         $boolCriticalErrorOccurred = $false
 
         $boolSuccess = Get-AclSafely ([ref]$objThisFolderPermission) ([ref]$objThis) $strThisObjectPath
@@ -1641,135 +1693,11 @@ function Repair-NTFSPermissionsRecursively {
                         $intFunctionReturn = -8
                         return $intFunctionReturn
                     } else {
-                        # Try again with a shorter path
-                        $strFolderTarget = $strThisObjectPath
-                        $strChildFolderOfTarget = ''
-
-                        #region Mitigate Path Length with Drive Substitution ###############
-                        # Inputs:
-                        # $strFolderTarget
-                        # $strChildFolderOfTarget
-
-                        $boolSubstWorked = $false
-                        $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
-                        if ($arrAvailableDriveLetters.Count -gt 0) {
-                            $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                            $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
-                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
-                            Write-Verbose ('About to run command: ' + $strCommand)
-                            $null = Invoke-Expression $strCommand
-
-                            # Confirm the path is ready
-                            $strJoinedPath = ''
-                            $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
-
-                            if ($boolPathAvailable -eq $false) {
-                                Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
-                                $intReturnCode = -1
-                            } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
-                            }
-
-                            $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                            Write-Verbose ('About to run command: ' + $strCommand)
-                            $null = Invoke-Expression $strCommand
-
-                            if ($boolUseGetPSDriveWorkaround -eq $true) {
-                                # Use workaround for drives not refreshing in current PowerShell session
-                                Get-PSDrive | Out-Null
-                            }
-
-                            if ($intReturnCode -eq 0) {
-                                $boolSubstWorked = $true
-                            }
-                        }
-                        #endregion Mitigate Path Length with Drive Substitution ###############
-
-                        #region Mitigate Path Length with Symbolic Link ####################
-                        # Inputs:
-                        # $strFolderTarget
-                        # $strChildFolderOfTarget
-
-                        # If a substituted drive failed, try a symbolic link instead
-                        $boolSymbolicLinkWorked = $false
-                        if ($boolSubstWorked -eq $false) {
-                            # Use a GUID to avoid name collisions
-                            $strGUID = [System.Guid]::NewGuid().ToString()
-
-                            # Create the symbolic link
-                            $versionPS = Get-PSVersion
-                            if ($versionPS -ge ([version]'5.0')) {
-                                # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                                Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strGUID + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
-                                # TODO: Test this with a path containing a dollar sign ($)
-                                New-Item -ItemType SymbolicLink -Path ('C:\' + $strGUID) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
-                            } else {
-                                # Need to use mklink command in command prompt instead
-                                # TODO: Test this with a path containing a dollar sign ($)
-                                $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
-                                $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strEscapedPathForInvokeExpression + '"'
-                                Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
-                                $null = Invoke-Expression $strCommand
-                            }
-
-                            # Confirm the path is ready
-                            $strJoinedPath = ''
-                            $boolPathAvailable = Wait-PathToBeReady -Path ('C:\' + $strGUID) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
-
-                            if ($boolErrorOccurredUsingNewPath -eq $true) {
-                                Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
-                                $intReturnCode = -2
-                            } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
-                            }
-
-                            if ($intReturnCode -lt 0) {
-                                # -2 if drive substitution and symbolic link failed
-                                $intFunctionReturn = $intReturnCode
-                                return $intFunctionReturn
-                            } elseif ($intReturnCode -eq 0) {
-                                $boolSymbolicLinkWorked = $true
-                            }
-
-                            # Remove Symbolic Link
-                            Write-Verbose ('Removing symbolic link: ' + ('C:\' + $strGUID))
-                            # TODO: Build error handling for this deletion:
-                            (Get-Item ('C:\' + $strGUID)).Delete()
-
-                            if ($boolUseGetPSDriveWorkaround -eq $true) {
-                                # Use workaround for drives not refreshing in current PowerShell session
-                                Get-PSDrive | Out-Null
-                            }
-                        }
-                        #endregion Mitigate Path Length with Symbolic Link ####################
-
-                        if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
-                            Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $strThisObjectPath)
-                            $intFunctionReturn = -9
-                            return $intFunctionReturn
-                        }
-                    }
-                } else {
-                    # No error occurred getting child items
-                    $boolLengthOfChildrenOK = $true
-
-                    # Check the length of all child objects first
-                    $arrChildObjects | ForEach-Object {
-                        $objDirectoryOrFileInfoChild = $_
-
-                        # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
-                        # (shorter) length limit
-                        if (($objDirectoryOrFileInfoChild.FullName).Length -ge $FOLDERPATHLIMIT) {
-                            $boolLengthOfChildrenOK = $false
-                        }
-                    }
-
-                    if ($boolLengthOfChildrenOK -eq $false) {
-                        # One or more child objects are too long
-
-                        if ($strThisObjectPath -eq $strLastSubstitutedPath) {
-                            Write-Error ('The path length on one or more child objects in folder "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so there is nothing further for this script to try. Please repair the permissions on this folder manually.')
-                            $intFunctionReturn = -10
+                        if ($strThisObjectPath.Length -le 3) {
+                            # The path is already as short as it can be, so there is
+                            # nothing further for this script to try
+                            Write-Error ('Unable to enumerate child objects in path "' + $strThisObjectPath + '". This can occur if path length is too long. However, in this case, its path length is already as short as possible, so there is nothing further for this script to try. Please investigate and then repair the permissions on this folder manually.')
+                            $intFunctionReturn = -12
                             return $intFunctionReturn
                         } else {
                             # Try again with a shorter path
@@ -1798,7 +1726,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                     $intReturnCode = -1
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ($strDriveLetterToUse + ':') $false
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1824,71 +1752,279 @@ function Repair-NTFSPermissionsRecursively {
                             # If a substituted drive failed, try a symbolic link instead
                             $boolSymbolicLinkWorked = $false
                             if ($boolSubstWorked -eq $false) {
-                                # Use a GUID to avoid name collisions
-                                $strGUID = [System.Guid]::NewGuid().ToString()
-
-                                # Create the symbolic link
-                                $versionPS = Get-PSVersion
-                                if ($versionPS -ge ([version]'5.0')) {
-                                    # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strGUID + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
-                                    # TODO: Test this with a path containing a dollar sign ($)
-                                    New-Item -ItemType SymbolicLink -Path ('C:\' + $strGUID) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                $boolSymbolicLinkTargetFound = $false
+                                $strSymbolicLinkFolderName = ''
+                                if ($strFolderTarget.Length -gt 35) {
+                                    # Use a GUID to avoid name collisions
+                                    $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
+                                    $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
+                                    $boolSymbolicLinkTargetFound = $true
+                                } elseif ($strFolderTarget.Length -gt 5) {
+                                    # Use a single character folder path to keep the name as short as possible
+                                    for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
+                                        $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
+                                        $strTestPath = Join-Path 'C:' $strPossibleSymbolicLinkFolder
+                                        if ((Test-Path $strTestPath) -eq $false) {
+                                            # This path is available
+                                            $strSymbolicLinkFolderName = $strPossibleSymbolicLinkFolder
+                                            $boolSymbolicLinkTargetFound = $true
+                                            break
+                                        }
+                                    }
                                 } else {
-                                    # Need to use mklink command in command prompt instead
-                                    # TODO: Test this with a path containing a dollar sign ($)
-                                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
-                                    $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "C:\' + $strGUID + '" "' + $strEscapedPathForInvokeExpression + '"'
-                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
-                                    $null = Invoke-Expression $strCommand
+                                    # The path is already short enough; cannot create a symbolic link
+                                    # $boolSymbolicLinkTargetFound = $false
                                 }
 
-                                # Confirm the path is ready
-                                $strJoinedPath = ''
-                                $boolPathAvailable = Wait-PathToBeReady -Path ('C:\' + $strGUID) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+                                if ($boolSymbolicLinkTargetFound -eq $true) {
+                                    # Create the symbolic link
+                                    $versionPS = Get-PSVersion
+                                    if ($versionPS -ge ([version]'5.0')) {
+                                        # PowerShell 5.0 and newer can make symbolic links in PowerShell
+                                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                        # TODO: Test this with a path containing a dollar sign ($)
+                                        New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                    } else {
+                                        # Need to use mklink command in command prompt instead
+                                        # TODO: Test this with a path containing a dollar sign ($)
+                                        $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                        $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
+                                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                        $null = Invoke-Expression $strCommand
+                                    }
 
-                                if ($boolErrorOccurredUsingNewPath -eq $true) {
-                                    Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
-                                    $intReturnCode = -2
-                                } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround ('C:\' + $strGUID) $false
-                                }
+                                    # Confirm the path is ready
+                                    $strJoinedPath = ''
+                                    $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
 
-                                if ($intReturnCode -lt 0) {
-                                    # -2 if drive substitution and symbolic link failed
-                                    $intFunctionReturn = $intReturnCode
-                                    return $intFunctionReturn
-                                } elseif ($intReturnCode -eq 0) {
-                                    $boolSymbolicLinkWorked = $true
-                                }
+                                    if ($boolErrorOccurredUsingNewPath -eq $true) {
+                                        Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                        $intReturnCode = -2
+                                    } else {
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                    }
 
-                                # Remove Symbolic Link
-                                Write-Verbose ('Removing symbolic link: ' + ('C:\' + $strGUID))
-                                # TODO: Build error handling for this deletion:
-                                (Get-Item ('C:\' + $strGUID)).Delete()
+                                    if ($intReturnCode -lt 0) {
+                                        # -2 if drive substitution and symbolic link failed
+                                        $intFunctionReturn = $intReturnCode
+                                        return $intFunctionReturn
+                                    } elseif ($intReturnCode -eq 0) {
+                                        $boolSymbolicLinkWorked = $true
+                                    }
 
-                                if ($boolUseGetPSDriveWorkaround -eq $true) {
-                                    # Use workaround for drives not refreshing in current PowerShell session
-                                    Get-PSDrive | Out-Null
+                                    # Remove Symbolic Link
+                                    Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                    # TODO: Build error handling for this deletion:
+                                    (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
+
+                                    if ($boolUseGetPSDriveWorkaround -eq $true) {
+                                        # Use workaround for drives not refreshing in current PowerShell session
+                                        Get-PSDrive | Out-Null
+                                    }
                                 }
                             }
                             #endregion Mitigate Path Length with Symbolic Link ####################
 
                             if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
                                 Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $strThisObjectPath)
-                                $intFunctionReturn = -11
+                                $intFunctionReturn = -9
                                 return $intFunctionReturn
                             }
                         }
+                    }
+                } else {
+                    # No error occurred getting child items
+                    $boolLengthOfChildrenOK = $true
+
+                    # Check the length of all child objects first
+                    $arrChildObjects | ForEach-Object {
+                        $objDirectoryOrFileInfoChild = $_
+
+                        # We don't know if $strThisObjectPath is pointing to a folder or a file, so use the folder
+                        # (shorter) length limit
+                        if (($objDirectoryOrFileInfoChild.FullName).Length -ge $FOLDERPATHLIMIT) {
+                            $boolLengthOfChildrenOK = $false
+                        }
+                    }
+
+                    if ($boolLengthOfChildrenOK -eq $false -and $boolUseTemporaryPathLenghIgnoringAltMode -ne $true) {
+                        # One or more child objects are too long and we are not in
+                        # temporary path length ignoring mode yet, so try again with
+                        # temporary path length ignoring mode enabled
+
+                        if ($strThisObjectPath -eq $strLastSubstitutedPath) {
+                            # We are not in temporary path length ignoring mode
+                            # yet, so try again with temporary path length
+                            # ignoring mode enabled
+                            Write-Verbose ('The path length on one or more child objects in folder "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                            $intFunctionReturn = $intReturnCode
+                            return $intFunctionReturn
+                        } else {
+                            if ($strThisObjectPath.Length -le 3) {
+                                # The path is already as short as it can be, so there
+                                # is nothing further to do to mitigate path length
+                                #
+                                # We are not in temporary path length ignoring mode
+                                # yet, so try again with temporary path length
+                                # ignoring mode enabled
+                                Write-Verbose ('The path length on one or more child objects in folder "' + $strThisObjectPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.')
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                                $intFunctionReturn = $intReturnCode
+                                return $intFunctionReturn
+                            } else {
+                                # Try again with a shorter path
+                                $strFolderTarget = $strThisObjectPath
+                                $strChildFolderOfTarget = ''
+
+                                #region Mitigate Path Length with Drive Substitution ###############
+                                # Inputs:
+                                # $strFolderTarget
+                                # $strChildFolderOfTarget
+
+                                $boolSubstWorked = $false
+                                $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
+                                if ($arrAvailableDriveLetters.Count -gt 0) {
+                                    $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
+                                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
+                                    Write-Verbose ('About to run command: ' + $strCommand)
+                                    $null = Invoke-Expression $strCommand
+
+                                    # Confirm the path is ready
+                                    $strJoinedPath = ''
+                                    $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                    if ($boolPathAvailable -eq $false) {
+                                        Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
+                                        $intReturnCode = -1
+                                    } else {
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $boolUseTemporaryPathLenghIgnoringAltMode
+                                    }
+
+                                    $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
+                                    Write-Verbose ('About to run command: ' + $strCommand)
+                                    $null = Invoke-Expression $strCommand
+
+                                    if ($boolUseGetPSDriveWorkaround -eq $true) {
+                                        # Use workaround for drives not refreshing in current PowerShell session
+                                        Get-PSDrive | Out-Null
+                                    }
+
+                                    if ($intReturnCode -eq 0) {
+                                        $boolSubstWorked = $true
+                                    }
+                                }
+                                #endregion Mitigate Path Length with Drive Substitution ###############
+
+                                #region Mitigate Path Length with Symbolic Link ####################
+                                # Inputs:
+                                # $strFolderTarget
+                                # $strChildFolderOfTarget
+
+                                # If a substituted drive failed, try a symbolic link instead
+                                $boolSymbolicLinkWorked = $false
+                                if ($boolSubstWorked -eq $false) {
+                                    $boolSymbolicLinkTargetFound = $false
+                                    $strSymbolicLinkFolderName = ''
+                                    if ($strFolderTarget.Length -gt 35) {
+                                        # Use a GUID to avoid name collisions
+                                        $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
+                                        $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
+                                        $boolSymbolicLinkTargetFound = $true
+                                    } elseif ($strFolderTarget.Length -gt 5) {
+                                        # Use a single character folder path to keep the name as short as possible
+                                        for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
+                                            $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
+                                            $strTestPath = Join-Path 'C:' $strPossibleSymbolicLinkFolder
+                                            if ((Test-Path $strTestPath) -eq $false) {
+                                                # This path is available
+                                                $strSymbolicLinkFolderName = $strPossibleSymbolicLinkFolder
+                                                $boolSymbolicLinkTargetFound = $true
+                                                break
+                                            }
+                                        }
+                                    } else {
+                                        # The path is already short enough; cannot create a symbolic link
+                                        # $boolSymbolicLinkTargetFound = $false
+                                    }
+
+                                    if ($boolSymbolicLinkTargetFound -eq $true) {
+                                        # Create the symbolic link
+                                        $versionPS = Get-PSVersion
+                                        if ($versionPS -ge ([version]'5.0')) {
+                                            # PowerShell 5.0 and newer can make symbolic links in PowerShell
+                                            Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                            # TODO: Test this with a path containing a dollar sign ($)
+                                            New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                        } else {
+                                            # Need to use mklink command in command prompt instead
+                                            # TODO: Test this with a path containing a dollar sign ($)
+                                            $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                            $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
+                                            Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                            $null = Invoke-Expression $strCommand
+                                        }
+
+                                        # Confirm the path is ready
+                                        $strJoinedPath = ''
+                                        $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                        if ($boolErrorOccurredUsingNewPath -eq $true) {
+                                            Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                            $intReturnCode = -2
+                                        } else {
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                        }
+
+                                        if ($intReturnCode -lt 0) {
+                                            # -2 if drive substitution and symbolic link failed
+                                            $intFunctionReturn = $intReturnCode
+                                            return $intFunctionReturn
+                                        } elseif ($intReturnCode -eq 0) {
+                                            $boolSymbolicLinkWorked = $true
+                                        }
+
+                                        # Remove Symbolic Link
+                                        Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                        # TODO: Build error handling for this deletion:
+                                        (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
+
+                                        if ($boolUseGetPSDriveWorkaround -eq $true) {
+                                            # Use workaround for drives not refreshing in current PowerShell session
+                                            Get-PSDrive | Out-Null
+                                        }
+                                    }
+                                }
+                                #endregion Mitigate Path Length with Symbolic Link ####################
+
+                                if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
+                                    Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $strThisObjectPath)
+                                    $intFunctionReturn = -11
+                                    return $intFunctionReturn
+                                }
+                            }
+                        }
                     } else {
-                        # The length of all child objects was OK
+                        # The length of all child objects was OK, or we are in
+                        # temporary path length ignoring mode
                         $arrChildObjects | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
-                            $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
-
-                            if ($intReturnCode -ne 0) {
-                                Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
-                                $intFunctionReturn = $intReturnCode
+                            if ($objDirectoryOrFileInfoChild.PSIsContainer -eq $true) {
+                                # Recursively process the child directory
+                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
+                                if ($intReturnCode -ne 0) {
+                                    Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                    $intFunctionReturn = $intReturnCode
+                                }
+                            } else {
+                                # Process the file
+                                # Pass-through temporary path length ignoring mode
+                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode
+                                if ($intReturnCode -ne 0) {
+                                    Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                    $intFunctionReturn = $intReturnCode
+                                }
                             }
                         }
                     }
