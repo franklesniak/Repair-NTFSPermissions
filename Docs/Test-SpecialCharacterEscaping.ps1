@@ -1,5 +1,6 @@
 $str = 'C:\Users\Administrator\Documents\yep`.txt'
-$strCharacterOfInterest = '`'
+$strCharacterOfInterest1 = '`'
+$strCharacterOfInterest2 = $null
 
 $strEscapeCharacter1 = '`'
 $strEscapeCharacter2 = '\'
@@ -282,7 +283,7 @@ Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strComm
 Invoke-Expression $strCommand
 
 $intCounter = 2
-$strWorking = $str.Replace($strCharacterOfInterest, $strEscapeCharacter1 + $strCharacterOfInterest)
+$strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter1 + $strCharacterOfInterest1)
 $foo = $null
 $objThis = $null
 $boolSuccess = Get-AclSafely ([ref]$foo) ([ref]$objThis) $strWorking
@@ -300,7 +301,7 @@ Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strComm
 Invoke-Expression $strCommand
 
 $intCounter = 3
-$strWorking = $str.Replace($strCharacterOfInterest, $strEscapeCharacter2 + $strCharacterOfInterest)
+$strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter2 + $strCharacterOfInterest1)
 $foo = $null
 $objThis = $null
 $boolSuccess = Get-AclSafely ([ref]$foo) ([ref]$objThis) $strWorking
