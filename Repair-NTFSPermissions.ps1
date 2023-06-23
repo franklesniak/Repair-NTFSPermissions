@@ -140,7 +140,7 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.0.20230623.0'
+$strThisScriptVersionNumber = [version]'1.0.20230623.1'
 
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
