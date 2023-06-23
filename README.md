@@ -85,7 +85,15 @@ One way to do this is:
 
 `Set-ExecutionPolicy Bypass -Scope Process`
 
-or
+### PowerShell 1.0 Limitations
+
+As noted previously, PowerShell 1.0 requires some script modifications (removal of comment-based help, parameters, and instead hard-coding the parameters to a variable assignment).
+
+However, PowerShell 1.0 will not support file and folder names containing square brackets due to limitations in the PowerShell engine related to Get-Item -> GetAccessControl().
+To process file and folder names with square brackets on systems running PowerShell 1.0, upgrade to PowerShell 2.0 where possible (Windows Vista or Windows Server 2008), or correct these files and folders manually (Windows Server 2003 or Windows XP).
+
+Additionally, PowerShell 1.0 does not understand a script execution policy of "Bypass", nor does it understand the concept of a scoped execution policy.
+To work around this problem, use a command like:
 
 `Set-ExecutionPolicy RemoteSigned`
 
