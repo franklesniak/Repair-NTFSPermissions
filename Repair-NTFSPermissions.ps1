@@ -140,7 +140,7 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.0.20230622.0'
+$strThisScriptVersionNumber = [version]'1.0.20230623.0'
 
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
@@ -610,7 +610,7 @@ function Get-AclSafely {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # This needs to be a one-liner for error handling to work!:
-    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; $objThisFolderPermission = $objThis.GetAccessControl() } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
+    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; $objThisFolderPermission = $objThis.GetAccessControl() } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
     # The above one-liner is a messy variant of the following, which had to be
     # converted to one line to prevent PowerShell v3 from throwing errors on the stack
     # when copy-pasted into the shell (despite there not being any apparent error):
@@ -624,12 +624,18 @@ function Get-AclSafely {
     #         $objThis = Get-Item -LiteralPath $strThisObjectPath -Force # -Force parameter is required to get hidden items
     #         $objThisFolderPermission = $objThis.GetAccessControl()
     #     } elseif ($versionPS.Major -eq 2) {
-    #         $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
+    #         # We don't need to escape the right square bracket based on testing, but
+    #         # we do need to escape the left square bracket. Nevertheless, escaping
+    #         # both brackets does work and seems like the safest option.
+    #         $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
     #         $objThisFolderPermission = $objThis.GetAccessControl()
     #     } else {
     #         # PowerShell v1
-    #         # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-    #         $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``'))
+    #         # Get-Item -> GetAccessControl() does not work and returns $null on
+    #         # PowerShell v1 for some reason.
+    #         # And, unfortunately, there is no apparent way to escape left square
+    #         # brackets with Get-Acl
+    #         $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``'))
     #     }
     # } else {
     #     # No square brackets; use Get-Acl
@@ -1203,7 +1209,13 @@ function Repair-NTFSPermissionsRecursively {
                 if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
                     # PowerShell v1
                     # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-                    $objThisFolderPermission = Get-Acl -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``'))
+                    # So, we need to use Get-Acl
+                    #
+                    # Unfortunately, there does not seem to be any way to escape a left
+                    # square bracket in a path passed to Get-Acl. But those paths
+                    # should have already thrown an error - so we stick with only
+                    # escaping a grave accent mark/backtick.
+                    $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``'))
                 } else {
                     # No square brackets; use Get-Acl
                     $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
@@ -1245,7 +1257,7 @@ function Repair-NTFSPermissionsRecursively {
                         $objThis = Get-Item -LiteralPath $strThisObjectPath -Force
                     } else {
                         # -Force parameter is required to get hidden items
-                        $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '\[')).Replace(']', '\]')).Replace('`', '``')) -Force
+                        $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force
                     }
                 } else {
                     # -Force parameter is required to get hidden items

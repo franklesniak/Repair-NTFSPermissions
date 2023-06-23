@@ -345,4 +345,3 @@ Write-Host ('Get-Item worked for attempt ' + $intCounter)
 $strCommand = 'icacls.exe "' + $strWorking + '"'
 Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strCommand)
 Invoke-Expression $strCommand
-
