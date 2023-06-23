@@ -937,8 +937,173 @@ function Wait-PathToBeReady {
     return $boolFunctionReturn
 }
 
+function Get-ScriptingFileSystemObjectSafely {
+    # Usage:
+    # $objScriptingFileSystemObject = $null
+    # $boolSuccess = Get-ScriptingFileSystemObjectSafely ([ref]$objScriptingFileSystemObject)
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting processing
+    }
+
+    $refScriptingFileSystemObject = $args[0]
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do our work
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and then
+    # continue on. Likewise, non-terminating errors will also not output anything, but they
+    # do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    $objScriptingFileSystemObject = New-Object -ComObject Scripting.FileSystemObject
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        $false
+    } else {
+        $true
+        $refScriptingFileSystemObject.Value = $objScriptingFileSystemObject
+    }
+}
+
+function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
+    # Usage:
+    # $strPath = 'D:\Shares\Human Resources\Personnel Information\Employee Files\John Doe'
+    # $objScriptingFileSystemObject = $null
+    # $boolSuccess = Get-FolderDOS83Path ([ref]$objScriptingFileSystemObject)
+    # if ($boolSuccess -eq $true) {
+    #   $objFSOFolderObject = $null
+    #   $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject ([ref]$objFSOFolderObject) ([ref]$objScriptingFileSystemObject) $strPath
+    # }
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting processing
+    }
+
+    $refFSOFolderObject = $args[0]
+    $refScriptingFileSystemObject = $args[1]
+    $strPath = $args[2]
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do our work
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and then
+    # continue on. Likewise, non-terminating errors will also not output anything, but they
+    # do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    $objFSOFolderObject = ($refScriptingFileSystemObject.Value).GetFolder($strPath)
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        $false
+    } else {
+        $true
+        $refFSOFolderObject.Value = $objFSOFolderObject
+    }
+}
+
+function Get-FileObjectSafelyUsingScriptingFileSystemObject {
+    # Usage:
+    # $strPath = 'D:\Shares\Human Resources\Personnel Information\Employee Files\John Doe.docx'
+    # $objScriptingFileSystemObject = $null
+    # $boolSuccess = Get-FileDOS83Path ([ref]$objScriptingFileSystemObject)
+    # if ($boolSuccess -eq $true) {
+    #   $objFSOFileObject = $null
+    #   $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject ([ref]$objFSOFileObject) ([ref]$objScriptingFileSystemObject) $strPath
+    # }
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting processing
+    }
+
+    $refFSOFileObject = $args[0]
+    $refScriptingFileSystemObject = $args[1]
+    $strPath = $args[2]
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do our work
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and then
+    # continue on. Likewise, non-terminating errors will also not output anything, but they
+    # do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    $objFSOFileObject = ($refScriptingFileSystemObject.Value).GetFile($strPath)
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        $false
+    } else {
+        $true
+        $refFSOFileObject.Value = $objFSOFileObject
+    }
+}
+
+function Get-DOS83Path {
+    # Usage:
+    # $strPath = 'D:\Shares\Human Resources\Personnel Information\Employee Files\John Doe.docx'
+    # $strDOS83Path = ''
+    # $boolSuccess = Get-DOS83Path ([ref]$strDOS83Path) $strPath
+
+    $refDOS83Path = $args[0]
+    $strPath = $args[1]
+
+    $objScriptingFileSystemObject = $null
+    $boolSuccess = Get-ScriptingFileSystemObjectSafely ([ref]$objScriptingFileSystemObject)
+    if ($boolSuccess -ne $true) {
+        return $false
+    } else {
+        # Try folder first
+        $objFSOFolderObject = $null
+        $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject ([ref]$objFSOFolderObject) ([ref]$objScriptingFileSystemObject) $strPath
+        if ($boolSuccess -eq $false) {
+            # Try file next
+            $objFSOFileObject = $null
+            $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject ([ref]$objFSOFileObject) ([ref]$objScriptingFileSystemObject) $strPath
+            if ($boolSuccess -eq $false) {
+                return $false
+            } else {
+                $refDOS83Path.Value = $objFSOFileObject.ShortPath
+                return $true
+            }
+        } else {
+            $refDOS83Path.Value = $objFSOFolderObject.ShortPath
+            return $true
+        }
+    }
+}
+
 function Repair-NTFSPermissionsRecursively {
-    # Syntax: $intReturnCode = Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' $true 0 $false ''
+    # Syntax: $intReturnCode = Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' $true 0 $false '' $false $false
 
     $strThisObjectPath = $args[0]
     $boolAllowRecursion = $args[1]
@@ -946,8 +1111,9 @@ function Repair-NTFSPermissionsRecursively {
     $boolUseGetPSDriveWorkaround = $args[3]
     $strLastSubstitutedPath = $args[4]
     $boolUseTemporaryPathLenghIgnoringAltMode = $args[5]
+    $boolRelaunchAttemptedWithDOS83Path = $args[6]
 
-    $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode
+    $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode + "`n" + 'Relaunch attempted with DOS 8.3 path: ' + $boolRelaunchAttemptedWithDOS83Path
     Write-Verbose $strVerboseMessage
 
     # $intIterativeRepairState:
@@ -1016,7 +1182,7 @@ function Repair-NTFSPermissionsRecursively {
                     # again with temporary path length ignoring mode enabled and
                     # recursion turned off
                     Write-Verbose ('The path length of item "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
-                    $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                    $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true $false
                     $intFunctionReturn = $intReturnCode
                     return $intFunctionReturn
                 } else {
@@ -1028,7 +1194,7 @@ function Repair-NTFSPermissionsRecursively {
                         # again with temporary path length ignoring mode enabled and
                         # recursion turned off
                         Write-Verbose ('The path length of item "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.')
-                        $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                        $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true $false
                         $intFunctionReturn = $intReturnCode
                         return $intFunctionReturn
                     } else {
@@ -1059,7 +1225,7 @@ function Repair-NTFSPermissionsRecursively {
                                 Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                 $intReturnCode = -1
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false $false
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1134,7 +1300,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                     $intReturnCode = -2
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false $false
                                 }
 
                                 if ($intReturnCode -lt 0) {
@@ -1195,9 +1361,26 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Get-AclSafely ([ref]$objThisFolderPermission) ([ref]$objThis) $strThisObjectPath
 
             if ($boolSuccess -eq $false) {
-                Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...')
-                $intFunctionReturn = -5
-                return $intFunctionReturn
+                if ($boolRelaunchAttemptedWithDOS83Path -eq $true) {
+                    # We already tried a DOS 8.3 path, and it didn't work; nothing else
+                    # we can do
+                    Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...')
+                    $intFunctionReturn = -5
+                    return $intFunctionReturn
+                } else {
+                    # Get the DOS 8.3 path and try again
+                    $strDOS83Path = ''
+                    $boolSuccess = Get-DOS83Path ([ref]$strDOS83Path) $strThisObjectPath
+                    if ($boolSuccess -eq $false) {
+                        Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.')
+                        $intFunctionReturn = -13
+                        return $intFunctionReturn
+                    } else {
+                        Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $strThisObjectPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path)
+                        $intReturnCode = Repair-NTFSPermissionsRecursively $strDOS83Path $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode $true
+                        return $intReturnCode
+                    }
+                }
             }
         } else {
             # Able to read the permissions of the parent folder, continue
@@ -1653,7 +1836,7 @@ function Repair-NTFSPermissionsRecursively {
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
                             # Restart process without recursion flag, phase 1
-                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 1 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 1 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false $false
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -1670,7 +1853,7 @@ function Repair-NTFSPermissionsRecursively {
                             # TODO: Create Set-ACLSafely function to suppress errors
                             Set-Acl -Path $strThisObjectPath -AclObject $objThisFolderPermission
                             # Restart process without recursion flag, phase 2
-                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 2 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $false 2 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false $false
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -1738,7 +1921,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                     $intReturnCode = -1
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $false $false
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1813,7 +1996,7 @@ function Repair-NTFSPermissionsRecursively {
                                         Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                         $intReturnCode = -2
                                     } else {
-                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false $false
                                     }
 
                                     if ($intReturnCode -lt 0) {
@@ -1869,7 +2052,7 @@ function Repair-NTFSPermissionsRecursively {
                             # yet, so try again with temporary path length
                             # ignoring mode enabled
                             Write-Verbose ('The path length on one or more child objects in folder "' + $strThisObjectPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
-                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                            $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true $false
                             $intFunctionReturn = $intReturnCode
                             return $intFunctionReturn
                         } else {
@@ -1881,7 +2064,7 @@ function Repair-NTFSPermissionsRecursively {
                                 # yet, so try again with temporary path length
                                 # ignoring mode enabled
                                 Write-Verbose ('The path length on one or more child objects in folder "' + $strThisObjectPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.')
-                                $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true
+                                $intReturnCode = Repair-NTFSPermissionsRecursively $strThisObjectPath $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $true $false
                                 $intFunctionReturn = $intReturnCode
                                 return $intFunctionReturn
                             } else {
@@ -1911,7 +2094,7 @@ function Repair-NTFSPermissionsRecursively {
                                         Write-Verbose ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                         $intReturnCode = -1
                                     } else {
-                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $boolUseTemporaryPathLenghIgnoringAltMode
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path ($strDriveLetterToUse + ':') '') $boolUseTemporaryPathLenghIgnoringAltMode $false
                                     }
 
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -1986,7 +2169,7 @@ function Repair-NTFSPermissionsRecursively {
                                             Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                             $intReturnCode = -2
                                         } else {
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively $strJoinedPath $true 0 $boolUseGetPSDriveWorkaround (Join-Path 'C:' $strSymbolicLinkFolderName) $false $false
                                         }
 
                                         if ($intReturnCode -lt 0) {
@@ -2024,7 +2207,7 @@ function Repair-NTFSPermissionsRecursively {
                             $objDirectoryOrFileInfoChild = $_
                             if ($objDirectoryOrFileInfoChild.PSIsContainer -eq $true) {
                                 # Recursively process the child directory
-                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false
+                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false $false
                                 if ($intReturnCode -ne 0) {
                                     Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
                                     $intFunctionReturn = $intReturnCode
@@ -2032,7 +2215,7 @@ function Repair-NTFSPermissionsRecursively {
                             } else {
                                 # Process the file
                                 # Pass-through temporary path length ignoring mode
-                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode
+                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode $false
                                 if ($intReturnCode -ne 0) {
                                     Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
                                     $intFunctionReturn = $intReturnCode
@@ -2047,7 +2230,7 @@ function Repair-NTFSPermissionsRecursively {
     return $intFunctionReturn
 }
 
-$intReturnCode = Repair-NTFSPermissionsRecursively $strPathToFix $true 0 $false '' $false
+$intReturnCode = Repair-NTFSPermissionsRecursively $strPathToFix $true 0 $false '' $false $false
 if ($intReturnCode -eq 0) {
     Write-Host ('Successfully processed path: ' + $strPathToFix)
 } else {
