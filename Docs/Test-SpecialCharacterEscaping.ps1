@@ -284,6 +284,9 @@ Invoke-Expression $strCommand
 
 $intCounter = 2
 $strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter1 + $strCharacterOfInterest1)
+if ([string]::IsNullOrEmpty($strCharacterOfInterest2) -eq $false) {
+    $strWorking = $strWorking.Replace($strCharacterOfInterest2, $strEscapeCharacter1 + $strCharacterOfInterest2)
+}
 $foo = $null
 $objThis = $null
 $boolSuccess = Get-AclSafely ([ref]$foo) ([ref]$objThis) $strWorking
@@ -302,6 +305,9 @@ Invoke-Expression $strCommand
 
 $intCounter = 3
 $strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter2 + $strCharacterOfInterest1)
+if ([string]::IsNullOrEmpty($strCharacterOfInterest2) -eq $false) {
+    $strWorking = $strWorking.Replace($strCharacterOfInterest2, $strEscapeCharacter2 + $strCharacterOfInterest2)
+}
 $foo = $null
 $objThis = $null
 $boolSuccess = Get-AclSafely ([ref]$foo) ([ref]$objThis) $strWorking
