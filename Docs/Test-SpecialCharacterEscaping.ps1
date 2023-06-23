@@ -264,6 +264,7 @@ function Get-ItemSafely {
     }
 }
 
+Write-Host '########################################################################################'
 $intCounter = 1
 $strWorking = $str
 $foo = $null
@@ -282,6 +283,7 @@ $strCommand = 'icacls.exe "' + $strWorking + '"'
 Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strCommand)
 Invoke-Expression $strCommand
 
+Write-Host '########################################################################################'
 $intCounter = 2
 $strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter1 + $strCharacterOfInterest1)
 if ([string]::IsNullOrEmpty($strCharacterOfInterest2) -eq $false) {
@@ -303,6 +305,7 @@ $strCommand = 'icacls.exe "' + $strWorking + '"'
 Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strCommand)
 Invoke-Expression $strCommand
 
+Write-Host '########################################################################################'
 $intCounter = 3
 $strWorking = $str.Replace($strCharacterOfInterest1, $strEscapeCharacter2 + $strCharacterOfInterest1)
 if ([string]::IsNullOrEmpty($strCharacterOfInterest2) -eq $false) {
@@ -324,6 +327,7 @@ $strCommand = 'icacls.exe "' + $strWorking + '"'
 Write-Host ('For attempt ' + $intCounter + ', about to run command: ' + $strCommand)
 Invoke-Expression $strCommand
 
+Write-Host '########################################################################################'
 $intCounter = 4
 $strWorking = [regex]::Escape($str)
 $foo = $null
