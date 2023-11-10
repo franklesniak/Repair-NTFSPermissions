@@ -112,7 +112,9 @@ param (
     [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $null,
     [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $null,
     [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $null,
-    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $null
+    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $null,
+    [Parameter(Mandatory = $false)][switch]$RemoveUnresolvedSIDs,
+    [Parameter(Mandatory = $false)][string]$PathToCSVContainingKnownSIDs = $null
 )
 
 # TODO: Function header, [CmdletBinding()], and param() block format are not supported
@@ -140,8 +142,11 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.0.20230623.1'
+$strThisScriptVersionNumber = [version]'1.1.20231110.0'
 
+#region Convert Param Block Inputs to More-Traditional Variables ###################
+# This makes it easier to run this script on PowerShell v1.0, which does not support
+# the [CmdletBinding()] attribute and the param() block format.
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
 $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl = $NameOfBuiltInAdministratorsGroupAccordingToGetAcl
@@ -151,6 +156,17 @@ $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $Na
 $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
 $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
 $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
+if ($null -eq $RemoveUnresolvedSIDs) {
+    $boolRemoveUnresolvedSIDs = $false
+} else {
+    if ($RemoveUnresolvedSIDs.IsPresent -eq $false) {
+        $boolRemoveUnresolvedSIDs = $false
+    } else {
+        $boolRemoveUnresolvedSIDs = $true
+    }
+}
+$strPathToCSVContainingKnownSIDs = $PathToCSVContainingKnownSIDs
+#endregion Convert Param Block Inputs to More-Traditional Variables ###################
 
 # TODO: additional code/logic is necessary for adding a read-only account, see TODO markers below
 
@@ -2228,6 +2244,52 @@ function Repair-NTFSPermissionsRecursively {
         }
     }
     return $intFunctionReturn
+}
+
+$hashtableKnownSIDs = $null
+if ($boolRemoveUnresolvedSIDs -eq $true) {
+    # If the user requested that we remove unresolved SIDs, make sure they've specified
+    # a CSV file containing all known SIDs in the environment. This protects against
+    # situation where an AD outage or domain connectivity disruption causes the script
+    # to remove all permissions from a folder/file because it cannot resolve the SIDs
+    # in the ACLs.
+
+    if ([string]::IsNullOrEmpty($strPathToCSVContainingKnownSIDs) -eq $true) {
+        Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but no path to a CSV file containing all known SIDs in the environment was specified. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+        return
+    } else {
+        if ((Test-Path $strPathToCSVContainingKnownSIDs) -eq $false) {
+            Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the path specified for the CSV file containing all known SIDs in the environment does not exist. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+            return
+        } else {
+            $arrSIDsFromCSV = @()
+            $arrSIDsFromCSV = @(Import-Csv $strPathToCSVContainingKnownSIDs)
+            if ($arrSIDsFromCSV.Count -eq 0) {
+                Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment is empty. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+                return
+            } else {
+                $strKnownSID = ($arrSIDsFromCSV[0]).SID
+                if ([string]::IsNullOrEmpty($strKnownSID) -eq $true) {
+                    Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment contains an empty value for the "SID" column (or does not contain the SID column at all). Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+                    return
+                } else {
+                    # The CSV file specified for the CSV file containing all known SIDs in the environment appears to be valid
+                    # Build these into a $hashtable for fast lookup later
+                    Write-Verbose 'Loading known SIDs from the specified CSV file into memory...'
+                    $hashtableKnownSIDs = @{}
+                    $arrSIDsFromCSV | ForEach-Object {
+                        $strSID = $_.SID
+                        if ([string]::IsNullOrEmpty($strSID) -eq $false) {
+                            if ($hashtableKnownSIDs.ContainsKey($strSID) -eq $false) {
+                                $hashtableKnownSIDs.Add($strSID, $null)
+                            }
+                        }
+                    }
+                    Write-Verbose 'Finished loading known SIDs from the specified CSV file into memory'
+                }
+            }
+        }
+    }
 }
 
 $intReturnCode = Repair-NTFSPermissionsRecursively $strPathToFix $true 0 $false '' $false $false
