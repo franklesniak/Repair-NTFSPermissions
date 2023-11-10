@@ -83,6 +83,32 @@ will be used and the script will not attempt to grant additional read-only permi
 This parameter is used when getting the ACL of the file or folder in PowerShell via
 Get-Acl.
 
+.PARAMETER RemoveUnresolvedSIDs
+Optionally, specifies that unresolved SIDs should be removed from the ACL. This
+parameter is optional; if not specified,  the script will not attempt to remove
+unresolved SIDs.
+
+.PARAMETER PathToCSVContainingKnownSIDs
+Optionally, specifies the path to a CSV file containing a list of known SIDs. This
+parameter is optional in general. However, if the RemoveUnresolvedSIDs switch parameter
+is specified, then this parameter must also be specified. If specified, this parameter
+must be a string containing a valid path to a CSV file. The CSV file must contain a
+column named 'SID' that contains the SIDs to be considered "known,", i.e., SIDs that
+should not be removed from the ACL. The CSV file may contain additional columns, but
+they will be ignored.
+
+If unresolved SIDs are to be removed, this CSV is required because it provides
+protection from the scenario where, for example, connectivity between a member server
+and Active Directory Domain Services is lost and the member server is unable to resolve
+SIDs to names. In this scenario, if this protection were not in place, then the script
+would remove all unresolved SIDs from the ACL, including SIDs that are not resolved
+because of the lost connectivity. This could result in the loss of access to the file
+or folder.
+
+Therefore, in the specified CSV, it is highly recommended to provide a list of *all
+SIDs* in the environment. This should include SIDs for all user accounts, groups, and
+computer accounts.
+
 .EXAMPLE
 PS C:\> .\Repair-NTFSPermissions.ps1 -PathToFix 'D:\Shares\Public'
 
