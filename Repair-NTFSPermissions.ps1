@@ -996,11 +996,6 @@ function Wait-PathToBeNotReady {
     This function waits for the specified path to be unavailable. It also tests that a
     Join-Path operation can be performed on the specified path and a child item
 
-    .PARAMETER ReferenceToJoinedPath
-    This parameter is a memory reference to a string variable that will be populated
-    with the joined path (parent path + child path). If no child path was specified,
-    then the parent path will be populated in the referenced variable.
-
     .PARAMETER ReferenceToUseGetPSDriveWorkaround
     This parameter is a memory reference to a boolean variable that indicates whether
     or not the Get-PSDrive workaround should be used. If the Get-PSDrive workaround is
@@ -1016,16 +1011,6 @@ function Wait-PathToBeNotReady {
     this path will populated into the variable referenced in the parameter
     ReferenceToJoinedPath
 
-    .PARAMETER ChildItemPath
-    This parameter is the child path to be used in the join-path operation. If no
-    child path is specified, then the path specified by the Path parameter will be
-    populated into the variable referenced in the parameter ReferenceToJoinedPath.
-    However, if a ChildItemPath is specified, then the path specified by the Path
-    parameter will be used as the parent path in the join-path operation, and the
-    ChildItemPath will be used as the child path in the join-path operation. The
-    joined path will be populated into the variable referenced in the parameter
-    ReferenceToJoinedPath.
-
     .PARAMETER MaximumWaitTimeInSeconds
     This parameter is the maximum amount of seconds to wait for the path to be ready.
     If the path is not ready within this time, then the function will return $false.
@@ -1039,12 +1024,11 @@ function Wait-PathToBeNotReady {
     Get-PSDrive workaround is not necessary on your system.
 
     .EXAMPLE
-    $strJoinedPath = ''
     $boolUseGetPSDriveWorkaround = $false
     $boolPathUnavailable = Wait-PathToBeNotReady -Path 'D:\Shares\Share\Data' -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
 
     .OUTPUTS
-    A boolean value indiciating whether the path is available
+    A boolean value indiciating whether the path is unavailable
     #>
 
     [CmdletBinding()]
@@ -1078,7 +1062,7 @@ function Wait-PathToBeNotReady {
     # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     #endregion License ################################################################
 
-    $versionThisFunction = [version]('1.0.20231110.0')
+    $versionThisFunction = [version]('1.0.20231111.0')
 
     #region Process Input ##########################################################
     if ($DoNotAttemptGetPSDriveWorkaround.IsPresent -eq $true) {
