@@ -117,6 +117,14 @@ administrators and the SYSTEM account have full control to the folder and all fi
 and subfolders. No additional accounts or groups will be granted permissions, and
 existing permissions will not be removed.
 
+.EXAMPLE
+PS C:\> .\Repair-NTFSPermissions.ps1 -PathToFix 'D:\Shares\Public' -RemoveUnresolvedSIDs -PathToCSVContainingKnownSIDs 'C:\Scripts\KnownSIDs.csv'
+
+This example will scan the permissions at D:\Shares\Public and ensure that local
+administrators and the SYSTEM account have full control to the folder and all files
+and subfolders. Additionally, it will remove any unresolved SIDs from the ACL, except
+for those SIDs that are listed in the CSV file at C:\Scripts\KnownSIDs.csv.
+
 .OUTPUTS
 None
 
@@ -168,7 +176,7 @@ param (
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
 
-$strThisScriptVersionNumber = [version]'1.1.20231110.0'
+$strThisScriptVersionNumber = [version]'1.1.20231111.0'
 
 #region Convert Param Block Inputs to More-Traditional Variables ###################
 # This makes it easier to run this script on PowerShell v1.0, which does not support

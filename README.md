@@ -75,7 +75,7 @@ When processing of a long path is completed, the script cleans up the drive subs
 
 ## Requirements
 
-The script requires PowerShell 2.0 or above - but it can be made to work on PowerShell 1.0 with some modifications (removal of comment-based help, parameters, and instead hard-coding the parameters to a variable assignment).
+The script requires PowerShell 2.0 or above - but it can be made to work on PowerShell 1.0 with some modifications (removal of comment-based help and parameters, and instead hard-coding the parameters to a variable assignment).
 
 The script must be run with administrative rights.
 Open PowerShell as an administrator, then run the script.
@@ -109,10 +109,11 @@ To use this feature, you must create a CSV that contains at least one column cal
 
 The CSV is used as a fail-safe in the event the script loses connectivity with its domain services.
 For example, if the script loses connectivity with Active Directory Domain Services (AD DS), it will be unable to resolve domain SIDs to their object names.
-Without this fail-safe in place, the script would treat these as unresolved SIDs and then start removing valid SIDs from file system objects, resulting in users or services losing access to the file system.
+Without this fail-safe in place, the script would treat these as unresolved SIDs and then start removing valid SIDs from file system objects, resulting in users or services losing access to the file system. **Of course, this would be bad!**
 
-Of course, this would be bad!
 So, please create a CSV listing every SID in Active Directory (users, computers, and groups) and populate those into a CSV before continuing.
+
+A sample script to generate this CSV for **one Active Directory Domain Services domain** is provided in the included script `Get-AllADDSSIDsForOneDomain.ps1`
 
 With the CSV populated, you can use an alternative command like:
 
