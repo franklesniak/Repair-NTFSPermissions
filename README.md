@@ -102,6 +102,24 @@ To run the script, type:
 
 Replace the path `E:\Shares\Human Resources` with the path that you want to ensure Administrators and SYSTEM have permission to.
 
+## Additional Features
+
+The script also contains a feature that allows the removal of unresolved SIDs (i.e., security identifiers that the operating system cannot resolve to a name on the network).
+To use this feature, you must create a CSV that contains at least one column called "SID" that contains every known/valid SID in your network environment.
+
+The CSV is used as a fail-safe in the event the script loses connectivity with its domain services.
+For example, if the script loses connectivity with Active Directory Domain Services (AD DS), it will be unable to resolve domain SIDs to their object names.
+Without this fail-safe in place, the script would treat these as unresolved SIDs and then start removing valid SIDs from file system objects, resulting in users or services losing access to the file system.
+
+Of course, this would be bad!
+So, please create a CSV listing every SID in Active Directory (users, computers, and groups) and populate those into a CSV before continuing.
+
+With the CSV populated, you can use an alternative command like:
+
+`Repair-NTFSPermissions -PathToFix 'E:\Shares\Human Resources' -RemoveUnresolvedSIDs -PathToCSVContainingKnownSIDs 'C:\Users\Public\Documents\KnownSIDs.csv'`
+
+This will parse the folder structure and ensure that Administrators and SYSTEM have full control - but additionally, it will remove any unresolvable SIDs from the file system.
+
 ## Additional Considerations
 
 The script has additional parameters that must be specified if you are running the script from a non-English version of Windows.
