@@ -647,7 +647,7 @@ function Get-AclSafely {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # This needs to be a one-liner for error handling to work!:
-    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; $objThisFolderPermission = $objThis.GetAccessControl() } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
+    if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; if ($versionPS -ge ([version]'7.3')) { if (@(Get-Module Microsoft.PowerShell.Security).Count -eq 0) { Import-Module Microsoft.PowerShell.Security } $objThisFolderPermission = [System.IO.FileSystemAclExtensions]::GetAccessControl($objThis) } else { $objThisFolderPermission = $objThis.GetAccessControl() } } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
     # The above one-liner is a messy variant of the following, which had to be
     # converted to one line to prevent PowerShell v3 from throwing errors on the stack
     # when copy-pasted into the shell (despite there not being any apparent error):
@@ -659,7 +659,20 @@ function Get-AclSafely {
     #     if ($versionPS.Major -ge 3) {
     #         # PowerShell v3 and newer supports -LiteralPath
     #         $objThis = Get-Item -LiteralPath $strThisObjectPath -Force # -Force parameter is required to get hidden items
-    #         $objThisFolderPermission = $objThis.GetAccessControl()
+    #         if ($versionPS -ge ([version]'7.3')) {
+    #             # PowerShell v7.3 and newer do not have Microsoft.PowerShell.Security
+    #             # automatically loaded; likewise, the .GetAccessControl() method of
+    #             # a folder or file object is missing. So, we need to load the
+    #             # Microsoft.PowerShell.Security module and then call
+    #             # [System.IO.FileSystemAclExtensions]::GetAccessControl()
+    #             if (@(Get-Module Microsoft.PowerShell.Security).Count -eq 0) {
+    #                 Import-Module Microsoft.PowerShell.Security
+    #             }
+    #             $objThisFolderPermission = [System.IO.FileSystemAclExtensions]::GetAccessControl($objThis)
+    #         } else {
+    #             # PowerShell v3 through v7.2
+    #             $objThisFolderPermission = $objThis.GetAccessControl()
+    #         }
     #     } elseif ($versionPS.Major -eq 2) {
     #         # We don't need to escape the right square bracket based on testing, but
     #         # we do need to escape the left square bracket. Nevertheless, escaping
@@ -791,13 +804,12 @@ function Get-ChildItemSafely {
 function Wait-PathToBeReady {
     <#
     .SYNOPSIS
-    Waits for the specified path to be available. Also tests that a join-path operation
+    Waits for the specified path to be available. Also tests that a Join-Path operation
     can be performed on the specified path and a child item
 
     .DESCRIPTION
-    This function evaluates the list of drive letters that are in use on the local
-    system and returns an array of those that are available. The list of available
-    drive letters is returned as an array of uppercase letters
+    This function waits for the specified path to be available. It also tests that a
+    Join-Path operation can be performed on the specified path and a child item
 
     .PARAMETER ReferenceToJoinedPath
     This parameter is a memory reference to a string variable that will be populated
@@ -883,7 +895,7 @@ function Wait-PathToBeReady {
     # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     #endregion License ################################################################
 
-    $versionThisFunction = [version]('1.0.20230619.0')
+    $versionThisFunction = [version]('1.0.20230619.1')
 
     #region Process Input ##########################################################
     if ($DoNotAttemptGetPSDriveWorkaround.IsPresent -eq $true) {
@@ -969,6 +981,155 @@ function Wait-PathToBeReady {
 
     if ($null -ne $ReferenceToJoinedPath.Value) {
         $ReferenceToJoinedPath.Value = $strJoinedPath
+    }
+
+    return $boolFunctionReturn
+}
+
+function Wait-PathToBeNotReady {
+    <#
+    .SYNOPSIS
+    Waits for the specified path to be unavailable. Also tests that a Join-Path
+    operation can be performed on the specified path and a child item
+
+    .DESCRIPTION
+    This function waits for the specified path to be unavailable. It also tests that a
+    Join-Path operation can be performed on the specified path and a child item
+
+    .PARAMETER ReferenceToJoinedPath
+    This parameter is a memory reference to a string variable that will be populated
+    with the joined path (parent path + child path). If no child path was specified,
+    then the parent path will be populated in the referenced variable.
+
+    .PARAMETER ReferenceToUseGetPSDriveWorkaround
+    This parameter is a memory reference to a boolean variable that indicates whether
+    or not the Get-PSDrive workaround should be used. If the Get-PSDrive workaround is
+    used, then the function will use the Get-PSDrive cmdlet to refresh PowerShell's
+    "understanding" of the available drive letters. This variable is passed by
+    reference to ensure that this function can set the variable to $true if the
+    Get-PSDrive workaround is successful - which improves performance of subsequent
+    runs.
+
+    .PARAMETER Path
+    This parameter is the path to be tested for availability, and the parent path to
+    be used in the join-path operation. If no child path is specified, then the
+    this path will populated into the variable referenced in the parameter
+    ReferenceToJoinedPath
+
+    .PARAMETER ChildItemPath
+    This parameter is the child path to be used in the join-path operation. If no
+    child path is specified, then the path specified by the Path parameter will be
+    populated into the variable referenced in the parameter ReferenceToJoinedPath.
+    However, if a ChildItemPath is specified, then the path specified by the Path
+    parameter will be used as the parent path in the join-path operation, and the
+    ChildItemPath will be used as the child path in the join-path operation. The
+    joined path will be populated into the variable referenced in the parameter
+    ReferenceToJoinedPath.
+
+    .PARAMETER MaximumWaitTimeInSeconds
+    This parameter is the maximum amount of seconds to wait for the path to be ready.
+    If the path is not ready within this time, then the function will return $false.
+    By default, this parameter is set to 10 seconds.
+
+    .PARAMETER DoNotAttemptGetPSDriveWorkaround
+    This parameter is a switch that indicates whether or not the Get-PSDrive
+    workaround should be attempted. If this switch is specified, then the Get-PSDrive
+    workaround will not be attempted. This switch is useful if you know that the
+    Get-PSDrive workaround will not work on your system, or if you know that the
+    Get-PSDrive workaround is not necessary on your system.
+
+    .EXAMPLE
+    $strJoinedPath = ''
+    $boolUseGetPSDriveWorkaround = $false
+    $boolPathUnavailable = Wait-PathToBeNotReady -Path 'D:\Shares\Share\Data' -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+    .OUTPUTS
+    A boolean value indiciating whether the path is available
+    #>
+
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+
+    param (
+        [Parameter(Mandatory = $false)][System.Management.Automation.PSReference]$ReferenceToUseGetPSDriveWorkaround = ([ref]$null),
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $false)][int]$MaximumWaitTimeInSeconds = 10,
+        [Parameter(Mandatory = $false)][switch]$DoNotAttemptGetPSDriveWorkaround
+    )
+
+    #region License ################################################################
+    # Copyright (c) 2023 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy of
+    # this software and associated documentation files (the "Software"), to deal in the
+    # Software without restriction, including without limitation the rights to use,
+    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+    # Software, and to permit persons to whom the Software is furnished to do so,
+    # subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in all
+    # copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ################################################################
+
+    $versionThisFunction = [version]('1.0.20231110.0')
+
+    #region Process Input ##########################################################
+    if ($DoNotAttemptGetPSDriveWorkaround.IsPresent -eq $true) {
+        $boolAttemptGetPSDriveWorkaround = $false
+    } else {
+        $boolAttemptGetPSDriveWorkaround = $true
+    }
+    #endregion Process Input ##########################################################
+
+    $boolFunctionReturn = $false
+
+    if ($null -ne ($ReferenceToUseGetPSDriveWorkaround.Value)) {
+        if (($ReferenceToUseGetPSDriveWorkaround.Value) -eq $true) {
+            # Use workaround for drives not refreshing in current PowerShell session
+            Get-PSDrive | Out-Null
+        }
+    }
+
+    $doubleSecondsCounter = 0
+
+    # Try Join-Path and sleep for up to $MaximumWaitTimeInSeconds seconds until it's successful
+    while ($doubleSecondsCounter -le $MaximumWaitTimeInSeconds -and $boolFunctionReturn -eq $false) {
+        if (Test-Path $Path) {
+            Start-Sleep 0.2
+            $doubleSecondsCounter += 0.2
+        } else {
+            $boolFunctionReturn = $true
+        }
+    }
+
+    if ($boolFunctionReturn -eq $false) {
+        if ($null -eq ($ReferenceToUseGetPSDriveWorkaround.Value) -or ($ReferenceToUseGetPSDriveWorkaround.Value) -eq $false) {
+            # Either a variable was not passed in, or the variable was passed in and it was set to false
+            if ($boolAttemptGetPSDriveWorkaround -eq $true) {
+                # Try workaround for drives not refreshing in current PowerShell session
+                Get-PSDrive | Out-Null
+
+                # Restart counter and try waiting again
+                $doubleSecondsCounter = 0
+
+                # Try Join-Path and sleep for up to $MaximumWaitTimeInSeconds seconds until it's successful
+                while ($doubleSecondsCounter -le $MaximumWaitTimeInSeconds -and $boolFunctionReturn -eq $false) {
+                    if (Test-Path $Path) {
+                        Start-Sleep 0.2
+                        $doubleSecondsCounter += 0.2
+                    } else {
+                        $boolFunctionReturn = $true
+                    }
+                }
+            }
+        }
     }
 
     return $boolFunctionReturn
@@ -1139,6 +1300,415 @@ function Get-DOS83Path {
     }
 }
 
+function Test-ValidSID {
+    #region FunctionHeader #########################################################
+    # This function tests whether the supplied arugment is a security identifier (SID).
+    # If the supplied argument is a SID, the function returns $true. If the supplied
+    # argument is not a SID, the function returns $false.
+    #
+    # One positional argument is required: an object to be evaluated to determine
+    # whether it is a SID
+    #
+    # The function returns $true if the supplied object is a SID; $false otherwise
+    #
+    # Example usage:
+    # $boolResult = Test-ValidSID 'S-1-5-21-1234567890-1234567890-1234567890-1000'
+    #
+    # Version: 2.0.20230719.0
+    #endregion FunctionHeader #########################################################
+
+    #region License ################################################################
+    # Copyright (c) 2023 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy of
+    # this software and associated documentation files (the "Software"), to deal in the
+    # Software without restriction, including without limitation the rights to use,
+    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+    # Software, and to permit persons to whom the Software is furnished to do so,
+    # subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in all
+    # copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ################################################################
+
+    #region Acknowledgements #######################################################
+    # Thanks to Friedrich Weinmann who suggested an alternative way to test for a SID:
+    # https://twitter.com/FredWeinmann/status/1675513443615404032?s=20
+    # retrieved on 2023-07-19
+    #endregion Acknowledgements #######################################################
+
+    #region FunctionsToSupportErrorHandling ########################################
+    function Get-ReferenceToLastError {
+        #region FunctionHeader #####################################################
+        # Function returns $null if no errors on on the $error stack;
+        # Otherwise, function returns a reference (memory pointer) to the last error
+        # that occurred.
+        #
+        # Version: 1.0.20230709.0
+        #endregion FunctionHeader #####################################################
+
+        #region License ############################################################
+        # Copyright (c) 2023 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a copy
+        # of this software and associated documentation files (the "Software"), to deal
+        # in the Software without restriction, including without limitation the rights
+        # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        # copies of the Software, and to permit persons to whom the Software is
+        # furnished to do so, subject to the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included in
+        # all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ############################################################
+
+        #region DownloadLocationNotice #############################################
+        # The most up-to-date version of this script can be found on the author's
+        # GitHub repository at https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #############################################
+
+        if ($error.Count -gt 0) {
+            [ref]($error[0])
+        } else {
+            $null
+        }
+    }
+
+    function Test-ErrorOccurred {
+        #region FunctionHeader #####################################################
+        # Function accepts two positional arguments:
+        #
+        # The first argument is a reference (memory pointer) to the last error that had
+        # occurred prior to calling the command in question - that is, the command that
+        # we want to test to see if an error occurred.
+        #
+        # The second argument is a reference to the last error that had occurred as-of
+        # the completion of the command in question
+        #
+        # Function returns $true if it appears that an error occurred; $false otherwise
+        #
+        # Version: 1.0.20230709.0
+        #endregion FunctionHeader #####################################################
+
+        #region License ############################################################
+        # Copyright (c) 2023 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a copy
+        # of this software and associated documentation files (the "Software"), to deal
+        # in the Software without restriction, including without limitation the rights
+        # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        # copies of the Software, and to permit persons to whom the Software is
+        # furnished to do so, subject to the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included in
+        # all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ############################################################
+
+        #region DownloadLocationNotice #################################################
+        # The most up-to-date version of this script can be found on the author's GitHub
+        # repository at https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #################################################
+
+        # TO-DO: Validate input
+
+        $boolErrorOccurred = $false
+        if (($null -ne ($args[0])) -and ($null -ne ($args[1]))) {
+            # Both not $null
+            if ((($args[0]).Value) -ne (($args[1]).Value)) {
+                $boolErrorOccurred = $true
+            }
+        } else {
+            # One is $null, or both are $null
+            # NOTE: ($args[0]) could be non-null, while ($args[1])
+            # could be null if $error was cleared; this does not indicate an error.
+            # So:
+            # If both are null, no error
+            # If ($args[0]) is null and ($args[1]) is non-null, error
+            # If ($args[0]) is non-null and ($args[1]) is null, no error
+            if (($null -eq ($args[0])) -and ($null -ne ($args[1]))) {
+                $boolErrorOccurred
+            }
+        }
+
+        $boolErrorOccurred
+    }
+    #endregion FunctionsToSupportErrorHandling ########################################
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
+    }
+
+    $objSID = $null
+
+    # Retrieve the newest error on the stack prior to running the command to determine
+    # if the object is a SID
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we call the command
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and
+    # then continue on. Likewise, non-terminating errors will also not output anything,
+    # but they do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    # Run the command to determine if the object is a SID
+    $objSID = ($args[0]) -as [System.Security.Principal.SecurityIdentifier]
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        return $false
+    } else {
+        return ($null -ne $objSID)
+    }
+}
+
+function Remove-SpecificAccessRuleRobust {
+    #region FunctionHeader #########################################################
+    # This function removes a specific access rule from a
+    # System.Security.AccessControl.DirectorySecurity or similar object safely and in a
+    # way that automaticaly retries if an error occurs.
+    #
+    # Four positional arguments are required:
+    #
+    # The first argument is an integer indicating the current attempt number. When
+    # calling this function for the first time, it should be 1
+    #
+    # The second argument is an integer representing the maximum number of attempts that
+    # the function will observe before giving up
+    #
+    # The third argument is a reference to a
+    # System.Security.AccessControl.DirectorySecurity or similar object that the access
+    # control entry will be removed from
+    #
+    # The fourth argument is a reference to a
+    # System.Security.AccessControl.FileSystemAccessRule or similar object that will be
+    # removed from the access control list
+    #
+    # The function returns $true if the process completed successfully; $false
+    # otherwise
+    #
+    # Example usage:
+    # $item = Get-Item 'D:\Shared\Human_Resources'
+    # $directorySecurity = $item.GetAccessControl()
+    # $arrFileSystemAccessRules = @($directorySecurity.Access)
+    # $boolSuccess = Remove-SpecificAccessRuleRobust 1 8 ([ref]$directorySecurity) ([ref]($arrFileSystemAccessRules[0]))
+    #
+    # Version: 1.0.20230731.0
+    #endregion FunctionHeader #########################################################
+
+    #region License ################################################################
+    # Copyright (c) 2023 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy of
+    # this software and associated documentation files (the "Software"), to deal in the
+    # Software without restriction, including without limitation the rights to use,
+    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+    # Software, and to permit persons to whom the Software is furnished to do so,
+    # subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in all
+    # copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ################################################################
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
+    }
+
+    $intCurrentAttemptNumber = $args[0]
+    $intMaximumAttempts = $args[1]
+    $refAccessControlSecurity = $args[2]
+    $refAccessControlAccessRule = $args[3]
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do the work of this
+    # function
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and
+    # then continue on. Likewise, non-terminating errors will also not output anything,
+    # but they do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    # Do the work of this function...
+    ($refAccessControlSecurity.Value).RemoveAccessRuleSpecific($refAccessControlAccessRule.Value)
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        # Error occurred
+        if ($intCurrentAttemptNumber -lt $intMaximumAttempts) {
+            Start-Sleep -Seconds ([math]::Pow(2, $intCurrentAttemptNumber))
+
+            $objResultIndicator = Remove-SpecificAccessRuleRobust ($intCurrentAttemptNumber + 1) $intMaximumAttempts $refAccessControlSecurity $refAccessControlAccessRule
+            $objResultIndicator
+        } else {
+            # Number of attempts exceeded maximum
+
+            # Return failure indicator:
+            return $false
+        }
+    } else {
+        # No error occurred
+
+        # Return success indicator:
+        return $true
+    }
+}
+
+function Write-ACLToDisk {
+    #region FunctionHeader #########################################################
+    # This function removes a specific access rule from a
+    # System.Security.AccessControl.DirectorySecurity or similar object safely and in a
+    # way that automaticaly retries if an error occurs.
+    #
+    # Four positional arguments are required:
+    #
+    # The first argument is an integer indicating the current attempt number. When
+    # calling this function for the first time, it should be 1
+    #
+    # The second argument is an integer representing the maximum number of attempts that
+    # the function will observe before giving up
+    #
+    # The third argument is a reference to a System.IO.DirectoryInfo,
+    # System.IO.FileInfo, or similar object where the access control list (ACL) will be
+    # written
+    #
+    # The fourth argument is a reference to a
+    # System.Security.AccessControl.DirectorySecurity,
+    # System.Security.AccessControl.FileSecurity, or similar object that will be
+    # removed from the access control list
+    #
+    # The function returns $true if the process completed successfully; $false
+    # otherwise
+    #
+    # Example usage:
+    # $item = Get-Item 'D:\Shared\Human_Resources'
+    # $directorySecurity = $item.GetAccessControl()
+    # # <Do something to modify $directorySecurity here...>
+    # $boolSuccess = Write-ACLToDisk 1 8 ([ref]$item) ([ref]$directorySecurity)
+    #
+    # Version: 1.0.20231110.0
+    #endregion FunctionHeader #########################################################
+
+    #region License ################################################################
+    # Copyright (c) 2023 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy of
+    # this software and associated documentation files (the "Software"), to deal in the
+    # Software without restriction, including without limitation the rights to use,
+    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+    # Software, and to permit persons to whom the Software is furnished to do so,
+    # subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in all
+    # copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ################################################################
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
+    }
+
+    $intCurrentAttemptNumber = $args[0]
+    $intMaximumAttempts = $args[1]
+    $refItem = $args[2]
+    $refAccessControlSecurity = $args[3]
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do the work of this
+    # function
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
+    # Terminating errors will not output anything, kick to the empty trap statement and
+    # then continue on. Likewise, non-terminating errors will also not output anything,
+    # but they do not kick to the trap statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    # Do the work of this function...
+    ($refItem.Value).SetAccessControl($refAccessControlSecurity.Value)
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        # Error occurred
+        if ($intCurrentAttemptNumber -lt $intMaximumAttempts) {
+            Start-Sleep -Seconds ([math]::Pow(2, $intCurrentAttemptNumber))
+
+            $objResultIndicator = Write-ACLToDisk ($intCurrentAttemptNumber + 1) $intMaximumAttempts $refAccessControlSecurity $refAccessControlAccessRule
+            $objResultIndicator
+        } else {
+            # Number of attempts exceeded maximum
+
+            # Return failure indicator:
+            return $false
+        }
+    } else {
+        # No error occurred
+
+        # Return success indicator:
+        return $true
+    }
+}
+
 function Repair-NTFSPermissionsRecursively {
     # Syntax: $intReturnCode = Repair-NTFSPermissionsRecursively 'D:\Shares\Corporate' $true 0 $false '' $false $false ([ref]$hashtableKnownSIDs)
 
@@ -1154,7 +1724,11 @@ function Repair-NTFSPermissionsRecursively {
     if ($null -eq $refHashtableKnownSIDs) {
         $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode + "`n" + 'Relaunch attempted with DOS 8.3 path: ' + $boolRelaunchAttemptedWithDOS83Path + "`n" + 'Known SIDs: not specified (unresolved SIDs will not be removed)'
     } else {
-        $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode + "`n" + 'Relaunch attempted with DOS 8.3 path: ' + $boolRelaunchAttemptedWithDOS83Path + "`n" + 'Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed)'
+        if ($null -eq $refHashtableKnownSIDs.Value) {
+            $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode + "`n" + 'Relaunch attempted with DOS 8.3 path: ' + $boolRelaunchAttemptedWithDOS83Path + "`n" + 'Known SIDs: not specified (unresolved SIDs will not be removed)'
+        } else {
+            $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters:' + "`n" + 'Path: ' + $strThisObjectPath + "`n" + 'Allow recursion: ' + $boolAllowRecursion + "`n" + 'Iterative repair state: ' + $intIterativeRepairState + "`n" + 'Use Get-Path workaround: ' + $boolUseGetPSDriveWorkaround + "`n" + 'Last substituted path: ' + $strLastSubstitutedPath + "`n" + 'Use temporary path length ignoring alt mode: ' + $boolUseTemporaryPathLenghIgnoringAltMode + "`n" + 'Relaunch attempted with DOS 8.3 path: ' + $boolRelaunchAttemptedWithDOS83Path + "`n" + 'Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed)'
+        }
     }
     Write-Verbose $strVerboseMessage
 
@@ -1254,7 +1828,7 @@ function Repair-NTFSPermissionsRecursively {
                         $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                         if ($arrAvailableDriveLetters.Count -gt 0) {
                             $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                            $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                            $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
@@ -1277,6 +1851,12 @@ function Repair-NTFSPermissionsRecursively {
                             if ($boolUseGetPSDriveWorkaround -eq $true) {
                                 # Use workaround for drives not refreshing in current PowerShell session
                                 Get-PSDrive | Out-Null
+                            }
+
+                            $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                            if ($boolPathUnavailable -eq $false) {
+                                Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
                             }
 
                             if ($intReturnCode -eq 0) {
@@ -1328,7 +1908,7 @@ function Repair-NTFSPermissionsRecursively {
                                 } else {
                                     # Need to use mklink command in command prompt instead
                                     # TODO: Test this with a path containing a dollar sign ($)
-                                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                    $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                     Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
@@ -1362,6 +1942,12 @@ function Repair-NTFSPermissionsRecursively {
                                     # Use workaround for drives not refreshing in current PowerShell session
                                     Get-PSDrive | Out-Null
                                 }
+
+                                $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                if ($boolPathUnavailable -eq $false) {
+                                    Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
+                                }
                             }
                         }
                         #endregion Mitigate Path Length with Symbolic Link ####################
@@ -1393,7 +1979,7 @@ function Repair-NTFSPermissionsRecursively {
             # Error occurred reading the ACL
 
             # Take ownership
-            $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+            $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
             Write-Verbose ('About to run command: ' + $strCommand)
             $null = Invoke-Expression $strCommand
@@ -1452,7 +2038,7 @@ function Repair-NTFSPermissionsRecursively {
                 # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
 
                 # Take ownership
-                $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
                 Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
@@ -1636,7 +2222,7 @@ function Repair-NTFSPermissionsRecursively {
                 Write-Verbose ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $strThisObjectPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for administrators
-                $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
@@ -1656,7 +2242,7 @@ function Repair-NTFSPermissionsRecursively {
                 Write-Verbose ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $strThisObjectPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for SYSTEM
-                $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(NP)(F)"'
@@ -1676,7 +2262,7 @@ function Repair-NTFSPermissionsRecursively {
                 Write-Verbose ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $strThisObjectPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional administrator
-                $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
@@ -1696,7 +2282,7 @@ function Repair-NTFSPermissionsRecursively {
                 Write-Verbose ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $strThisObjectPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional read only account
-                $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(RX)"'
@@ -1872,7 +2458,7 @@ function Repair-NTFSPermissionsRecursively {
                             # Try taking ownership of the folder/file
 
                             # Take ownership
-                            $strEscapedPathForInvokeExpression = ((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                            $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
                             $strCommand += ' 2>&1'
                             Write-Verbose ('About to run command: ' + $strCommand)
@@ -1912,6 +2498,170 @@ function Repair-NTFSPermissionsRecursively {
             }
         }
 
+        #region Programmatically Change Permissions via PowerShell #################
+        # $arrACEs is already initialized (and refreshed if permission changes were
+        # made above)
+
+        # Check to see if we are supposed to make any changes
+        if ($null -eq $refHashtableKnownSIDs) {
+            $boolRemoveUnresolvedSIDs = $false
+        } else {
+            $boolRemoveUnresolvedSIDs = ($null -ne ($refHashtableKnownSIDs.Value))
+        }
+
+        if ($boolRemoveUnresolvedSIDs -eq $true) {
+            # Changes are potentially required
+
+            # Make a copy of $arrACEs and store it in $arrWorkingACEs
+            $arrWorkingACEs = @($arrACEs | Where-Object { $_.IsInherited -eq $false } |
+                    ForEach-Object {
+                        $strIdentityReference = $_.IdentityReference.Value
+                        $intFileSystemRights = [int]($_.FileSystemRights)
+                        $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$intFileSystemRights
+                        $intInheritanceFlags = [int]($_.InheritanceFlags)
+                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
+                        $intPropagationFlags = [int]($_.PropagationFlags)
+                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]$intPropagationFlags
+                        $intAccessControlType = [int]($_.AccessControlType)
+                        $accessControlType = [System.Security.AccessControl.AccessControlType]$intAccessControlType
+
+                        New-Object System.Security.AccessControl.FileSystemAccessRule($strIdentityReference, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                    })
+
+            $intNumberOfItems = $arrWorkingACEs.Count
+            $intLastNumberOfItems = $arrACEs.Count
+
+            $arrACETracking = New-Object bool[] $intNumberOfItems
+            for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
+                $arrACETracking[$intCounterA] = $false
+            }
+
+            $boolACLChangeMade = $false
+
+            for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
+                if (($arrWorkingACEs[$intCounterA]).IsInherited -eq $false) {
+                    # ACE is not inherited
+                    Write-Verbose ('Found non-inherited ACE in path "' + $strThisObjectPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".')
+                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                            # ACE is a SID
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                if (($refHashtableKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                } else {
+                                    # Not a protected SID
+                                    if ($arrACETracking[$intCounterA] -eq $true) {
+                                        Write-Warning ('Removing ACE from path "' + $strThisObjectPath + '" that was already been used in an operation.')
+                                    }
+                                    Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '".')
+                                    $boolSuccess = Remove-SpecificAccessRuleRobust 1 2 ([ref]$objThisFolderPermission) ([ref]($arrWorkingACEs[$intCounterA]))
+                                    if ($boolSuccess -eq $false) {
+                                        # Permissions were not removed
+                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                    } else {
+                                        $arrACETracking[$intCounterA] = $true
+                                        # Test to see if permissions were removed by comparing the ACE count
+                                        $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                        if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                            # Permissions were removed
+                                            Write-Verbose ('...the unresolved SID was removed...')
+                                            $intLastNumberOfItems = $intCurrentNumberOfItems
+                                            $boolACLChangeMade = $true
+                                        } else {
+                                            # Permissions were not removed
+                                            Write-Verbose ('...the unresolved SID was not removed...')
+                                        }
+                                    }
+                                }
+                            }
+                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference.Value)) -eq $true) {
+                            # ACE is a SID (string)
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                if (($refHashtableKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                } else {
+                                    # Not a protected SID
+                                    if ($arrACETracking[$intCounterA] -eq $true) {
+                                        Write-Warning ('Removing ACE from path "' + $strThisObjectPath + '" that was already been used in an operation.')
+                                    }
+                                    Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '".')
+                                    $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
+                                    $fileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
+                                    $inheritanceFlags = ($arrWorkingACEs[$intCounterA]).InheritanceFlags
+                                    $propagationFlags = ($arrWorkingACEs[$intCounterA]).PropagationFlags
+                                    $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
+                                    $fileSystemAccessRuleOld = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                                    $boolSuccess = Remove-SpecificAccessRuleRobust 1 2 ([ref]$objThisFolderPermission) ([ref]($fileSystemAccessRuleOld))
+                                    if ($boolSuccess -eq $false) {
+                                        # Permissions were not removed
+                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                    } else {
+                                        $arrACETracking[$intCounterA] = $true
+                                        # Test to see if permissions were removed by comparing the ACE count
+                                        $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                        if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                            # Permissions were removed
+                                            Write-Verbose ('...the unresolved SID was removed...')
+                                            $intLastNumberOfItems = $intCurrentNumberOfItems
+                                            $boolACLChangeMade = $true
+                                        } else {
+                                            # Permissions were not removed
+                                            Write-Verbose ('...the unresolved SID was not removed...')
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            # Presumably ACE is an NTAccount per
+                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+                        }
+                    }
+                } else {
+                    # ACE is inherited
+                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                            # ACE is a SID
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                if (($refHashtableKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                } else {
+                                    # Not a protected SID
+                                    Write-Warning ('An unresolved SID was found at the path ' + $strThisObjectPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                                }
+                            }
+                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference.Value)) -eq $true) {
+                            # ACE is a SID (string)
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                if (($refHashtableKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $strThisObjectPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                } else {
+                                    # Not a protected SID
+                                    Write-Warning ('An unresolved SID was found at the path ' + $strThisObjectPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                                }
+                            }
+                        } else {
+                            # Presumably ACE is an NTAccount per
+                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+                        }
+                    }
+                }
+            }
+
+            # Write ACL changes to disk
+            if ($boolACLChangeMade -eq $true) {
+                Write-Verbose ('Writing ACL changes to disk for path "' + $strThisObjectPath + '".')
+                $boolSuccess = Write-ACLToDisk 1 2 ([ref]$objThis) ([ref]$objThisFolderPermission)
+                if ($boolSuccess -eq $false) {
+                    # TODO: Capture $_.Exception.Message from failure in Write-ACLToDisk
+                    # Write-Warning ('Unable to write ACL changes to disk for path "' + $strThisObjectPath + '". Error: ' + $_.Exception.Message + '; child folders and files will not be processed!')
+                    Write-Warning ('Unable to write ACL changes to disk for path "' + $strThisObjectPath + '". Child folders and files will not be processed!')
+                    intFunctionReturn = -14
+                    return $intFunctionReturn
+                }
+            }
+        }
+        #endregion Programmatically Change Permissions via PowerShell #################
+
         if ($objThis.PSIsContainer) {
             # This object is a folder, not a file
 
@@ -1950,7 +2700,7 @@ function Repair-NTFSPermissionsRecursively {
                             $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                             if ($arrAvailableDriveLetters.Count -gt 0) {
                                 $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                                $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                                 Write-Verbose ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
@@ -1973,6 +2723,12 @@ function Repair-NTFSPermissionsRecursively {
                                 if ($boolUseGetPSDriveWorkaround -eq $true) {
                                     # Use workaround for drives not refreshing in current PowerShell session
                                     Get-PSDrive | Out-Null
+                                }
+
+                                $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                if ($boolPathUnavailable -eq $false) {
+                                    Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
                                 }
 
                                 if ($intReturnCode -eq 0) {
@@ -2024,7 +2780,7 @@ function Repair-NTFSPermissionsRecursively {
                                     } else {
                                         # Need to use mklink command in command prompt instead
                                         # TODO: Test this with a path containing a dollar sign ($)
-                                        $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                        $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                         $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                         Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                         $null = Invoke-Expression $strCommand
@@ -2057,6 +2813,12 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($boolUseGetPSDriveWorkaround -eq $true) {
                                         # Use workaround for drives not refreshing in current PowerShell session
                                         Get-PSDrive | Out-Null
+                                    }
+
+                                    $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                    if ($boolPathUnavailable -eq $false) {
+                                        Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
                                     }
                                 }
                             }
@@ -2123,7 +2885,7 @@ function Repair-NTFSPermissionsRecursively {
                                 $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
                                 if ($arrAvailableDriveLetters.Count -gt 0) {
                                     $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                                    $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                    $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                                     Write-Verbose ('About to run command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
@@ -2146,6 +2908,12 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($boolUseGetPSDriveWorkaround -eq $true) {
                                         # Use workaround for drives not refreshing in current PowerShell session
                                         Get-PSDrive | Out-Null
+                                    }
+
+                                    $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                    if ($boolPathUnavailable -eq $false) {
+                                        Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
                                     }
 
                                     if ($intReturnCode -eq 0) {
@@ -2197,7 +2965,7 @@ function Repair-NTFSPermissionsRecursively {
                                         } else {
                                             # Need to use mklink command in command prompt instead
                                             # TODO: Test this with a path containing a dollar sign ($)
-                                            $strEscapedPathForInvokeExpression = ((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))
+                                            $strEscapedPathForInvokeExpression = (((($strThisObjectPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                             $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                             Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                             $null = Invoke-Expression $strCommand
@@ -2231,6 +2999,12 @@ function Repair-NTFSPermissionsRecursively {
                                             # Use workaround for drives not refreshing in current PowerShell session
                                             Get-PSDrive | Out-Null
                                         }
+
+                                        $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround ([ref]$boolUseGetPSDriveWorkaround)
+
+                                        if ($boolPathUnavailable -eq $false) {
+                                            Write-Warning ('There was an issue processing the path "' + $strThisObjectPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
+                                        }
                                     }
                                 }
                                 #endregion Mitigate Path Length with Symbolic Link ####################
@@ -2245,23 +3019,27 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         # The length of all child objects was OK, or we are in
                         # temporary path length ignoring mode
-                        $arrChildObjects | ForEach-Object {
+
+                        # Process files first
+                        $arrChildObjects | Where-Object { $_.PSIsContainer -eq $false } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
-                            if ($objDirectoryOrFileInfoChild.PSIsContainer -eq $true) {
-                                # Recursively process the child directory
-                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false $false $refHashtableKnownSIDs
-                                if ($intReturnCode -ne 0) {
-                                    Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
-                                    $intFunctionReturn = $intReturnCode
-                                }
-                            } else {
-                                # Process the file
-                                # Pass-through temporary path length ignoring mode
-                                $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode $false $refHashtableKnownSIDs
-                                if ($intReturnCode -ne 0) {
-                                    Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
-                                    $intFunctionReturn = $intReturnCode
-                                }
+                            # Process the file
+                            # Pass-through temporary path length ignoring mode
+                            $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $false 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $boolUseTemporaryPathLenghIgnoringAltMode $false $refHashtableKnownSIDs
+                            if ($intReturnCode -ne 0) {
+                                Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                $intFunctionReturn = $intReturnCode
+                            }
+                        }
+
+                        # Next, process folders/directories/containers
+                        $arrChildObjects | Where-Object { $_.PSIsContainer -eq $true } | ForEach-Object {
+                            $objDirectoryOrFileInfoChild = $_
+                            # Recursively process the child directory
+                            $intReturnCode = Repair-NTFSPermissionsRecursively ($objDirectoryOrFileInfoChild.FullName) $true 0 $boolUseGetPSDriveWorkaround $strLastSubstitutedPath $false $false $refHashtableKnownSIDs
+                            if ($intReturnCode -ne 0) {
+                                Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                $intFunctionReturn = $intReturnCode
                             }
                         }
                     }
