@@ -135,6 +135,8 @@ existing permissions are not known or documented (and even if they are known or
 documented, it can be time-consuming and disruptive to business to re-apply them).
 #>
 
+# Version 1.1.20241105.0
+
 [CmdletBinding()]
 
 param (
@@ -175,8 +177,6 @@ param (
 # CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
-
-$strThisScriptVersionNumber = [version]'1.1.20231111.0'
 
 #region Convert Param Block Inputs to More-Traditional Variables ###################
 # This makes it easier to run this script on PowerShell v1.0, which does not support
@@ -314,113 +314,166 @@ function Test-ErrorOccurred {
 #endregion FunctionsToSupportErrorHandling
 
 function Get-PSVersion {
-    # Returns the version of PowerShell that is running, including on the original
-    # release of Windows PowerShell (version 1.0)
+    #region FunctionHeader #################################################
+    # Returns the version of PowerShell that is running, including on the
+    # original release of Windows PowerShell (version 1.0)
     #
     # Example:
     # Get-PSVersion
     #
-    # This example returns the version of PowerShell that is running. On versions of
-    # PowerShell greater than or equal to version 2.0, this function returns the
-    # equivalent of $PSVersionTable.PSVersion
+    # This example returns the version of PowerShell that is running. On
+    # versions of PowerShell greater than or equal to version 2.0, this
+    # function returns the equivalent of $PSVersionTable.PSVersion
     #
-    # The function outputs a [version] object representing the version of PowerShell
-    # that is running
+    # The function outputs a [version] object representing the version of
+    # PowerShell that is running
     #
-    # PowerShell 1.0 does not have a $PSVersionTable variable, so this function returns
-    # [version]('1.0') on PowerShell 1.0
+    # PowerShell 1.0 does not have a $PSVersionTable variable, so this function
+    # returns [version]('1.0') on PowerShell 1.0
+    #
+    # Version 1.0.20241105.0
+    #endregion FunctionHeader #################################################
 
-    #region License ################################################################
-    # Copyright (c) 2023 Frank Lesniak
+    #region License ########################################################
+    # Copyright (c) 2024 Frank Lesniak
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy of
-    # this software and associated documentation files (the "Software"), to deal in the
-    # Software without restriction, including without limitation the rights to use,
-    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-    # Software, and to permit persons to whom the Software is furnished to do so,
-    # subject to the following conditions:
+    # Permission is hereby granted, free of charge, to any person obtaining a
+    # copy of this software and associated documentation files (the
+    # "Software"), to deal in the Software without restriction, including
+    # without limitation the rights to use, copy, modify, merge, publish,
+    # distribute, sublicense, and/or sell copies of the Software, and to permit
+    # persons to whom the Software is furnished to do so, subject to the
+    # following conditions:
     #
-    # The above copyright notice and this permission notice shall be included in all
-    # copies or substantial portions of the Software.
+    # The above copyright notice and this permission notice shall be included
+    # in all copies or substantial portions of the Software.
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    #endregion License ################################################################
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+    # USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ########################################################
 
-    #region DownloadLocationNotice #################################################
-    # The most up-to-date version of this script can be found on the author's GitHub
-    # repository at https://github.com/franklesniak/PowerShell_Resources
-    #endregion DownloadLocationNotice #################################################
-
-    $versionThisFunction = [version]('1.0.20230709.0')
+    #region DownloadLocationNotice #########################################
+    # The most up-to-date version of this script can be found on the author's
+    # GitHub repository at:
+    # https://github.com/franklesniak/PowerShell_Resources
+    #endregion DownloadLocationNotice #########################################
 
     if (Test-Path variable:\PSVersionTable) {
-        $PSVersionTable.PSVersion
+        return ($PSVersionTable.PSVersion)
     } else {
-        [version]('1.0')
+        return ([version]('1.0'))
     }
 }
 
 function Test-Windows {
-    <#
-    .SYNOPSIS
-    Returns a boolean ($true or $false) indicating whether the current PowerShell
-    session is running on Windows
-
-    .DESCRIPTION
-    Returns a boolean ($true or $false) indicating whether the current PowerShell
-    session is running on Windows. This function is useful for writing scripts that
-    need to behave differently on Windows and non-Windows platforms (Linux, macOS,
-    etc.). Additionally, this function is useful because it works on Windows PowerShell
-    1.0 through 5.1, which do not have the $IsWindows global variable.
-
-    .EXAMPLE
-    Test-Windows
-
-    This example returns $true if the current PowerShell session is running on Windows,
-    and $false if the current PowerShell session is running on a non-Windows platform
-    (Linux, macOS, etc.)
-
-    .OUTPUTS
-    A [bool] (boolean) object representing whether the current platform is Windows
-    ($true) or non-Windows ($false)
-
-    .NOTES
-    PowerShell 1.0 through 5.1 do not have a built-in $IsWindows global variable,
-    making the test for whether the current platform is Windows a bit more complicated
-    #>
-
-    [CmdletBinding()]
-    [OutputType([bool])]
-
-    param ()
-
-    #region License ################################################################
-    # Copyright (c) 2023 Frank Lesniak
+    #region FunctionHeader #################################################
+    # Returns a boolean ($true or $false) indicating whether the current
+    # PowerShell session is running on Windows. This function is useful for
+    # writing scripts that need to behave differently on Windows and non-
+    # Windows platforms (Linux, macOS, etc.). Additionally, this function is
+    # useful because it works on Windows PowerShell 1.0 through 5.1, which do
+    # not have the $IsWindows global variable.
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy of
-    # this software and associated documentation files (the "Software"), to deal in the
-    # Software without restriction, including without limitation the rights to use,
-    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-    # Software, and to permit persons to whom the Software is furnished to do so,
-    # subject to the following conditions:
+    # Example:
+    # $boolIsWindows = Test-Windows
     #
-    # The above copyright notice and this permission notice shall be included in all
-    # copies or substantial portions of the Software.
+    # This example returns $true if the current PowerShell session is running
+    # on Windows, and $false if the current PowerShell session is running on a
+    # non-Windows platform (Linux, macOS, etc.)
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    #endregion License ################################################################
+    # Version 1.0.20241105.0
+    #endregion FunctionHeader #################################################
 
-    $versionThisFunction = [version]('1.0.20230613.0')
+    #region License ########################################################
+    # Copyright (c) 2024 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a
+    # copy of this software and associated documentation files (the
+    # "Software"), to deal in the Software without restriction, including
+    # without limitation the rights to use, copy, modify, merge, publish,
+    # distribute, sublicense, and/or sell copies of the Software, and to permit
+    # persons to whom the Software is furnished to do so, subject to the
+    # following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included
+    # in all copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+    # USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ########################################################
+
+    #region DownloadLocationNotice #########################################
+    # The most up-to-date version of this script can be found on the author's
+    # GitHub repository at:
+    # https://github.com/franklesniak/PowerShell_Resources
+    #endregion DownloadLocationNotice #########################################
+
+    function Get-PSVersion {
+        #region FunctionHeader #################################################
+        # Returns the version of PowerShell that is running, including on the
+        # original release of Windows PowerShell (version 1.0)
+        #
+        # Example:
+        # Get-PSVersion
+        #
+        # This example returns the version of PowerShell that is running. On
+        # versions of PowerShell greater than or equal to version 2.0, this
+        # function returns the equivalent of $PSVersionTable.PSVersion
+        #
+        # The function outputs a [version] object representing the version of
+        # PowerShell that is running
+        #
+        # PowerShell 1.0 does not have a $PSVersionTable variable, so this function
+        # returns [version]('1.0') on PowerShell 1.0
+        #
+        # Version 1.0.20241105.0
+        #endregion FunctionHeader #################################################
+
+        #region License ########################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a
+        # copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to permit
+        # persons to whom the Software is furnished to do so, subject to the
+        # following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included
+        # in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+        # USE OR OTHER DEALINGS IN THE SOFTWARE.
+        #endregion License ########################################################
+
+        #region DownloadLocationNotice #########################################
+        # The most up-to-date version of this script can be found on the author's
+        # GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #########################################
+
+        if (Test-Path variable:\PSVersionTable) {
+            return ($PSVersionTable.PSVersion)
+        } else {
+            return ([version]('1.0'))
+        }
+    }
 
     $versionPS = Get-PSVersion
     if ($versionPS.Major -ge 6) {
@@ -431,89 +484,255 @@ function Test-Windows {
 }
 
 function Get-AvailableDriveLetter {
-    <#
-    .SYNOPSIS
-    Returns an array of available (unused) drive letters
-
-    .DESCRIPTION
-    This function evaluates the list of drive letters that are in use on the local
-    system and returns an array of those that are available. The list of available
-    drive letters is returned as an array of uppercase letters
-
-    .PARAMETER DoNotConsiderMappedDriveLettersAsInUse
-    By default, if this function encounters a drive letter that is mapped to a network
-    share, it will consider that drive letter to be in use. However, if this switch
-    parameter is supplied, then mapped drives will be ignored and their drive letters
-    will be considered available.
-
-    .PARAMETER DoNotConsiderPSDriveLettersAsInUse
-    By default, if this function encounters a drive letter that is mapped to a
-    PowerShell drive, it will consider that drive letter to be in use. However, if this
-    switch parameter is supplied, then PowerShell drives will be ignored and their
-    drive letters will be considered available.
-
-    .PARAMETER ConsiderFloppyDriveLettersAsEligible
-    By default, this function will not consider A: or B: drive letters as available. If
-    this switch parameter is supplied, then A: and B: drive letters will be considered
-    available if they are not in use.
-
-    .EXAMPLE
-    $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
-
-    This example returns an array of available drive letters, excluding A: and B:
-    drive, and excluding drive letters that are mapped to network shares or PowerShell
-    drives (PSDrives).
-
-    To access the alphabetically-first available drive letter, use:
-    $arrAvailableDriveLetters[0]
-
-    To access the alphabetically-last available drive letter, use:
-    $arrAvailableDriveLetters[-1]
-
-    .OUTPUTS
-    Array of uppercase letters (strings) representing available drive letters
-
-    .NOTES
-    It is conventional that A: and B: drives be reserved for floppy drives, and that C:
-    be reserved for the system drive.
-
-    This function depends on the functions Get-PSVersion and Test-Windows
-    #>
-
-
-    [CmdletBinding()]
-    [OutputType([string[]])]
-
-    param (
-        [Parameter(Mandatory = $false)][switch]$DoNotConsiderMappedDriveLettersAsInUse,
-        [Parameter(Mandatory = $false)][switch]$DoNotConsiderPSDriveLettersAsInUse,
-        [Parameter(Mandatory = $false)][switch]$ConsiderFloppyDriveLettersAsEligible
-    )
-
-    #region License ################################################################
-    # Copyright (c) 2023 Frank Lesniak
+    #region FunctionHeader #####################################################
+    # This function evaluates the list of drive letters that are in use on the
+    # local system and returns an array of those that are available. The list of
+    # available drive letters is returned as an array of uppercase letters
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy of
-    # this software and associated documentation files (the "Software"), to deal in the
-    # Software without restriction, including without limitation the rights to use,
-    # copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
-    # Software, and to permit persons to whom the Software is furnished to do so,
-    # subject to the following conditions:
+    # The function returns an array of uppercase letters (strings) representing
+    # available drive letters
     #
-    # The above copyright notice and this permission notice shall be included in all
-    # copies or substantial portions of the Software.
+    # This function supports three parameters:
+    #
+    # Parameter 1: DoNotConsiderMappedDriveLettersAsInUse
+    # By default, if this function encounters a drive letter that is mapped to a
+    # network share, it will consider that drive letter to be in use. However, if
+    # this switch parameter is supplied, then mapped drives will be ignored and
+    # their drive letters will be considered available.
+    #
+    # Parameter 2: DoNotConsiderPSDriveLettersAsInUse
+    # By default, if this function encounters a drive letter that is mapped to a
+    # PowerShell drive, it will consider that drive letter to be in use. However,
+    # if this switch parameter is supplied, then PowerShell drives will be ignored
+    # and their drive letters will be considered available.
+    #
+    # Parameter 3: ConsiderFloppyDriveLettersAsEligible
+    # By default, this function will not consider A: or B: drive letters as
+    # available. If this switch parameter is supplied, then A: and B: drive letters
+    # will be considered available if they are not in use.
+    #
+    # Example:
+    # $arrAvailableDriveLetters = @(Get-AvailableDriveLetter)
+    # This example returns an array of available drive letters, excluding A: and B:
+    # drive, and excluding drive letters that are mapped to network shares or
+    # PowerShell drives (PSDrives).
+    #
+    # In this example, to access the alphabetically-first available drive letter,
+    # use:
+    # $arrAvailableDriveLetters[0]
+    # To access the alphabetically-last available drive letter, use:
+    # $arrAvailableDriveLetters[-1]
+    #
+    # Note: it is conventional that A: and B: drives be reserved for floppy drives,
+    # and that C: be reserved for the system drive.
+    #
+    # Version 1.0.20241105.0
+    #endregion FunctionHeader #####################################################
+
+    #region License ############################################################
+    # Copyright (c) 2024 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy
+    # of this software and associated documentation files (the "Software"), to deal
+    # in the Software without restriction, including without limitation the rights
+    # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    # copies of the Software, and to permit persons to whom the Software is
+    # furnished to do so, subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in
+    # all copies or substantial portions of the Software.
     #
     # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-    # FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-    # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
-    # AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-    # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-    #endregion License ################################################################
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    # SOFTWARE.
+    #endregion License ############################################################
 
-    $versionThisFunction = [version]('1.0.20230619.0')
+    #region DownloadLocationNotice #############################################
+    # The most up-to-date version of this script can be found on the author's
+    # GitHub repository at https://github.com/franklesniak/PowerShell_Resources
+    #endregion DownloadLocationNotice #############################################
 
-    #region Process Input ##########################################################
+    param (
+        [switch]$DoNotConsiderMappedDriveLettersAsInUse,
+        [switch]$DoNotConsiderPSDriveLettersAsInUse,
+        [switch]$ConsiderFloppyDriveLettersAsEligible
+    )
+
+    function Get-PSVersion {
+        #region FunctionHeader #################################################
+        # Returns the version of PowerShell that is running, including on the
+        # original release of Windows PowerShell (version 1.0)
+        #
+        # Example:
+        # Get-PSVersion
+        #
+        # This example returns the version of PowerShell that is running. On
+        # versions of PowerShell greater than or equal to version 2.0, this
+        # function returns the equivalent of $PSVersionTable.PSVersion
+        #
+        # The function outputs a [version] object representing the version of
+        # PowerShell that is running
+        #
+        # PowerShell 1.0 does not have a $PSVersionTable variable, so this function
+        # returns [version]('1.0') on PowerShell 1.0
+        #
+        # Version 1.0.20241105.0
+        #endregion FunctionHeader #################################################
+
+        #region License ########################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a
+        # copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to permit
+        # persons to whom the Software is furnished to do so, subject to the
+        # following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included
+        # in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+        # USE OR OTHER DEALINGS IN THE SOFTWARE.
+        #endregion License ########################################################
+
+        #region DownloadLocationNotice #########################################
+        # The most up-to-date version of this script can be found on the author's
+        # GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #########################################
+
+        if (Test-Path variable:\PSVersionTable) {
+            return ($PSVersionTable.PSVersion)
+        } else {
+            return ([version]('1.0'))
+        }
+    }
+
+    function Test-Windows {
+        #region FunctionHeader #################################################
+        # Returns a boolean ($true or $false) indicating whether the current
+        # PowerShell session is running on Windows. This function is useful for
+        # writing scripts that need to behave differently on Windows and non-
+        # Windows platforms (Linux, macOS, etc.). Additionally, this function is
+        # useful because it works on Windows PowerShell 1.0 through 5.1, which do
+        # not have the $IsWindows global variable.
+        #
+        # Example:
+        # $boolIsWindows = Test-Windows
+        #
+        # This example returns $true if the current PowerShell session is running
+        # on Windows, and $false if the current PowerShell session is running on a
+        # non-Windows platform (Linux, macOS, etc.)
+        #
+        # Version 1.0.20241105.0
+        #endregion FunctionHeader #################################################
+
+        #region License ########################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a
+        # copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to permit
+        # persons to whom the Software is furnished to do so, subject to the
+        # following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included
+        # in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+        # USE OR OTHER DEALINGS IN THE SOFTWARE.
+        #endregion License ########################################################
+
+        #region DownloadLocationNotice #########################################
+        # The most up-to-date version of this script can be found on the author's
+        # GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #########################################
+
+        function Get-PSVersion {
+            #region FunctionHeader #################################################
+            # Returns the version of PowerShell that is running, including on the
+            # original release of Windows PowerShell (version 1.0)
+            #
+            # Example:
+            # Get-PSVersion
+            #
+            # This example returns the version of PowerShell that is running. On
+            # versions of PowerShell greater than or equal to version 2.0, this
+            # function returns the equivalent of $PSVersionTable.PSVersion
+            #
+            # The function outputs a [version] object representing the version of
+            # PowerShell that is running
+            #
+            # PowerShell 1.0 does not have a $PSVersionTable variable, so this function
+            # returns [version]('1.0') on PowerShell 1.0
+            #
+            # Version 1.0.20241105.0
+            #endregion FunctionHeader #################################################
+
+            #region License ########################################################
+            # Copyright (c) 2024 Frank Lesniak
+            #
+            # Permission is hereby granted, free of charge, to any person obtaining a
+            # copy of this software and associated documentation files (the
+            # "Software"), to deal in the Software without restriction, including
+            # without limitation the rights to use, copy, modify, merge, publish,
+            # distribute, sublicense, and/or sell copies of the Software, and to permit
+            # persons to whom the Software is furnished to do so, subject to the
+            # following conditions:
+            #
+            # The above copyright notice and this permission notice shall be included
+            # in all copies or substantial portions of the Software.
+            #
+            # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+            # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+            # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+            # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+            # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+            # USE OR OTHER DEALINGS IN THE SOFTWARE.
+            #endregion License ########################################################
+
+            #region DownloadLocationNotice #########################################
+            # The most up-to-date version of this script can be found on the author's
+            # GitHub repository at:
+            # https://github.com/franklesniak/PowerShell_Resources
+            #endregion DownloadLocationNotice #########################################
+
+            if (Test-Path variable:\PSVersionTable) {
+                return ($PSVersionTable.PSVersion)
+            } else {
+                return ([version]('1.0'))
+            }
+        }
+
+        $versionPS = Get-PSVersion
+        if ($versionPS.Major -ge 6) {
+            $IsWindows
+        } else {
+            $true
+        }
+    }
+
+    #region Process Input ######################################################
     if ($DoNotConsiderMappedDriveLettersAsInUse.IsPresent -eq $true) {
         $boolExcludeMappedDriveLetters = $false
     } else {
@@ -531,7 +750,7 @@ function Get-AvailableDriveLetter {
     } else {
         $boolExcludeFloppyDriveLetters = $true
     }
-    #endregion Process Input ##########################################################
+    #endregion Process Input ######################################################
 
     $VerbosePreferenceAtStartOfFunction = $VerbosePreference
 
