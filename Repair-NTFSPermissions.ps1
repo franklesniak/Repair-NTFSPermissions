@@ -206,42 +206,43 @@ $strPathToCSVContainingKnownSIDs = $PathToCSVContainingKnownSIDs
 
 #region FunctionsToSupportErrorHandling
 function Get-ReferenceToLastError {
-    #region FunctionHeader #################################################
+    #region FunctionHeader #############################################
     # Function returns $null if no errors on on the $error stack;
     # Otherwise, function returns a reference (memory pointer) to the last
     # error that occurred.
     #
-    # Version: 1.0.20241105.0
-    #endregion FunctionHeader #################################################
+    # Version: 1.0.20241211.0
+    #endregion FunctionHeader #############################################
 
-    #region License ########################################################
+    #region License ####################################################
     # Copyright (c) 2024 Frank Lesniak
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a
-    # copy of this software and associated documentation files (the
+    # Permission is hereby granted, free of charge, to any person obtaining
+    # a copy of this software and associated documentation files (the
     # "Software"), to deal in the Software without restriction, including
     # without limitation the rights to use, copy, modify, merge, publish,
-    # distribute, sublicense, and/or sell copies of the Software, and to permit
-    # persons to whom the Software is furnished to do so, subject to the
-    # following conditions:
+    # distribute, sublicense, and/or sell copies of the Software, and to
+    # permit persons to whom the Software is furnished to do so, subject to
+    # the following conditions:
     #
-    # The above copyright notice and this permission notice shall be included
-    # in all copies or substantial portions of the Software.
+    # The above copyright notice and this permission notice shall be
+    # included in all copies or substantial portions of the Software.
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-    # USE OR OTHER DEALINGS IN THE SOFTWARE.
-    #endregion License ########################################################
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+    # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+    # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    # SOFTWARE.
+    #endregion License ####################################################
 
-    #region DownloadLocationNotice #########################################
-    # The most up-to-date version of this script can be found on the author's
-    # GitHub repository at:
+    #region DownloadLocationNotice #####################################
+    # The most up-to-date version of this script can be found on the
+    # author's GitHub repository at:
     # https://github.com/franklesniak/PowerShell_Resources
-    #endregion DownloadLocationNotice #########################################
+    #endregion DownloadLocationNotice #####################################
 
     if ($Error.Count -gt 0) {
         return ([ref]($Error[0]))
@@ -251,50 +252,51 @@ function Get-ReferenceToLastError {
 }
 
 function Test-ErrorOccurred {
-    #region FunctionHeader #################################################
+    #region FunctionHeader #############################################
     # Function accepts two positional arguments:
     #
-    # The first argument is a reference (memory pointer) to the last error that
-    # had occurred prior to calling the command in question - that is, the
-    # command that we want to test to see if an error occurred.
+    # The first argument is a reference (memory pointer) to the last error
+    # that had occurred prior to calling the command in question - that is,
+    # the command that we want to test to see if an error occurred.
     #
-    # The second argument is a reference to the last error that had occurred
-    # as-of the completion of the command in question.
+    # The second argument is a reference to the last error that had
+    # occurred as-of the completion of the command in question.
     #
     # Function returns $true if it appears that an error occurred; $false
     # otherwise
     #
-    # Version: 1.0.20241105.0
-    #endregion FunctionHeader #################################################
+    # Version: 1.0.20241211.0
+    #endregion FunctionHeader #############################################
 
-    #region License ########################################################
+    #region License ####################################################
     # Copyright (c) 2024 Frank Lesniak
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a
-    # copy of this software and associated documentation files (the
+    # Permission is hereby granted, free of charge, to any person obtaining
+    # a copy of this software and associated documentation files (the
     # "Software"), to deal in the Software without restriction, including
     # without limitation the rights to use, copy, modify, merge, publish,
-    # distribute, sublicense, and/or sell copies of the Software, and to permit
-    # persons to whom the Software is furnished to do so, subject to the
-    # following conditions:
+    # distribute, sublicense, and/or sell copies of the Software, and to
+    # permit persons to whom the Software is furnished to do so, subject to
+    # the following conditions:
     #
-    # The above copyright notice and this permission notice shall be included
-    # in all copies or substantial portions of the Software.
+    # The above copyright notice and this permission notice shall be
+    # included in all copies or substantial portions of the Software.
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-    # USE OR OTHER DEALINGS IN THE SOFTWARE.
-    #endregion License ########################################################
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+    # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+    # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    # SOFTWARE.
+    #endregion License ####################################################
 
-    #region DownloadLocationNotice #########################################
-    # The most up-to-date version of this script can be found on the author's
-    # GitHub repository at:
+    #region DownloadLocationNotice #####################################
+    # The most up-to-date version of this script can be found on the
+    # author's GitHub repository at:
     # https://github.com/franklesniak/PowerShell_Resources
-    #endregion DownloadLocationNotice #########################################
+    #endregion DownloadLocationNotice #####################################
 
     # TO-DO: Validate input
 
@@ -307,7 +309,8 @@ function Test-ErrorOccurred {
     } else {
         # One is $null, or both are $null
         # NOTE: ($args[0]) could be non-null, while ($args[1])
-        # could be null if $error was cleared; this does not indicate an error.
+        # could be null if $error was cleared; this does not indicate an
+        # error.
         # So:
         # If both are null, no error
         # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -534,7 +537,7 @@ function Get-AvailableDriveLetter {
     # Note: it is conventional that A: and B: drives be reserved for floppy drives,
     # and that C: be reserved for the system drive.
     #
-    # Version 1.0.20241105.0
+    # Version 1.0.20241112.0
     #endregion FunctionHeader #####################################################
 
     #region License ############################################################
@@ -763,7 +766,6 @@ function Get-AvailableDriveLetter {
     $VerbosePreferenceAtStartOfFunction = $VerbosePreference
 
     if ((Test-Windows) -eq $true) {
-
         $arrAllPossibleLetters = 65..90 | ForEach-Object { [char]$_ }
 
         $versionPS = Get-PSVersion
@@ -774,10 +776,11 @@ function Get-AvailableDriveLetter {
                 ForEach-Object { $_.DeviceID } | Where-Object { $_.Length -eq 2 } |
                 Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
                 ForEach-Object { $_[0] } | Where-Object { $arrAllPossibleLetters -contains $_ }
-            # fifth-, fourth-, and third-to-last bits of pipeline ensures that we have a device ID like
-            # "C:" second-to-last bit of pipeline strips off the ':', leaving just the capital drive
-            # letter last bit of pipeline ensure that the drive letter is actually a letter; addresses
-            # legacy Netware edge cases
+            # fifth-, fourth-, and third-to-last bits of pipeline ensures that we
+            # have a device ID like "C:"; second-to-last bit of pipeline strips off
+            # the ':', leaving just the capital drive letter; last bit of pipeline
+            # ensure that the drive letter is actually a letter; addresses legacy
+            # Netware edge cases
             $VerbosePreference = $VerbosePreferenceAtStartOfFunction
 
             if ($boolExcludeMappedDriveLetters -eq $true) {
@@ -786,11 +789,12 @@ function Get-AvailableDriveLetter {
                     ForEach-Object { $_.LocalName } | Where-Object { $_.Length -eq 2 } |
                     Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
                     ForEach-Object { $_[0] } |
-                    Where-Object { $private.arrAllPossibleLetters -contains $_ }
-                # fifth-, fourth-, and third-to-last bits of pipeline ensures that we have a LocalName like "C:"
-                # second-to-last bit of pipeline strips off the ':', leaving just the capital drive letter
-                # last bit of pipeline ensure that the drive letter is actually a letter; addresses legacy
-                # Netware edge cases
+                    Where-Object { $arrAllPossibleLetters -contains $_ }
+                # fifth-, fourth-, and third-to-last bits of pipeline ensures that
+                # we have a LocalName like "C:"; second-to-last bit of pipeline
+                # strips off the ':', leaving just the capital drive letter; last
+                # bit of pipeline ensure that the drive letter is actually a
+                # letter; addresses legacy Netware edge cases
                 $VerbosePreference = $VerbosePreferenceAtStartOfFunction
             } else {
                 $arrUsedMappedDriveLetters = $null
@@ -801,10 +805,11 @@ function Get-AvailableDriveLetter {
                 ForEach-Object { $_.DeviceID } | Where-Object { $_.Length -eq 2 } |
                 Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
                 ForEach-Object { $_[0] } | Where-Object { $arrAllPossibleLetters -contains $_ }
-            # fifth-, fourth-, and third-to-last bits of pipeline ensures that we have a device ID like
-            # "C:" second-to-last bit of pipeline strips off the ':', leaving just the capital drive
-            # letter last bit of pipeline ensure that the drive letter is actually a letter; addresses
-            # legacy Netware edge cases
+            # fifth-, fourth-, and third-to-last bits of pipeline ensures that we
+            # have a device ID like "C:"; second-to-last bit of pipeline strips off
+            # the ':', leaving just the capital drive letter; last bit of pipeline
+            # ensure that the drive letter is actually a letter; addresses legacy
+            # Netware edge cases
             $VerbosePreference = $VerbosePreferenceAtStartOfFunction
 
             if ($boolExcludeMappedDriveLetters -eq $true) {
@@ -813,11 +818,12 @@ function Get-AvailableDriveLetter {
                     ForEach-Object { $_.LocalName } | Where-Object { $_.Length -eq 2 } |
                     Where-Object { $_[1] -eq ':' } | ForEach-Object { $_.ToUpper() } |
                     ForEach-Object { $_[0] } |
-                    Where-Object { $private.arrAllPossibleLetters -contains $_ }
-                # fifth-, fourth-, and third-to-last bits of pipeline ensures that we have a LocalName like "C:"
-                # second-to-last bit of pipeline strips off the ':', leaving just the capital drive letter
-                # last bit of pipeline ensure that the drive letter is actually a letter; addresses legacy
-                # Netware edge cases
+                    Where-Object { $arrAllPossibleLetters -contains $_ }
+                # fifth-, fourth-, and third-to-last bits of pipeline ensures that
+                # we have a LocalName like "C:"; second-to-last bit of pipeline
+                # strips off the ':', leaving just the capital drive letter; last
+                # bit of pipeline ensure that the drive letter is actually a
+                # letter; addresses legacy Netware edge cases
                 $VerbosePreference = $VerbosePreferenceAtStartOfFunction
             } else {
                 $arrUsedMappedDriveLetters = $null
@@ -825,12 +831,13 @@ function Get-AvailableDriveLetter {
         }
 
         if ($boolExcludePSDriveLetters -eq $true) {
-            $arrUsedPSDriveLetters = Get-PSDrive | ForEach-Object { $_.Name } | `
-                    Where-Object { $_.Length -eq 1 } | ForEach-Object { $_.ToUpper() } | `
-                    Where-Object { $private.arrAllPossibleLetters -contains $_ }
-            # Checking for a length of 1 strips out most PSDrives that are not drive letters
-            # Making sure that each item in the resultant set matches something in
-            # $arrAllPossibleLetters filters out edge cases, like a PSDrive named '1'
+            $arrUsedPSDriveLetters = Get-PSDrive | ForEach-Object { $_.Name } |
+                Where-Object { $_.Length -eq 1 } | ForEach-Object { $_.ToUpper() } |
+                Where-Object { $arrAllPossibleLetters -contains $_ }
+            # Checking for a length of 1 strips out most PSDrives that are not
+            # drive letters; making sure that each item in the resultant set
+            # matches something in $arrAllPossibleLetters filters out edge cases,
+            # like a PSDrive named '1'
         } else {
             $arrUsedPSDriveLetters = $null
         }
@@ -867,12 +874,12 @@ function Get-AclSafely {
     # the object resulting from Get-Acl. If the operation was unsuccessful, the
     # referenced object will be left unchanged.
     #
-    # The second argument is a reference to an object (the specific object type will
-    # vary depending on the type of object/path supplied in the third argument). In
-    # cases where this function needs to retrieve the object (using Get-Item) to
-    # retrieve the access control entry (ACL), the referenced object will be
-    # populated with the object resulting from Get-Item. If the function did not
-    # need to use Get-Item, the referenced object will be left unchanged.
+    # The second argument is a reference to an object (the specific object type
+    # will vary depending on the type of object/path supplied in the third
+    # argument). In cases where this function needs to retrieve the object (using
+    # Get-Item) to retrieve the access control entry (ACL), the referenced object
+    # will be populated with the object resulting from Get-Item. If the function
+    # did not need to use Get-Item, the referenced object will be left unchanged.
     #
     # The third argument is a string representing the path to the object for which
     # the ACL is to be retrieved. This path can be a file or folder path, or it can
@@ -893,7 +900,7 @@ function Get-AclSafely {
     # $strThisObjectPath = 'D:\Shares\Share\Accounting'
     # $boolSuccess = Get-AclSafely ([ref]$objThisFolderPermission) ([ref]$objThis) $strThisObjectPath
     #
-    # Version 1.0.20241110.0
+    # Version 1.0.20241211.0
     #endregion FunctionHeader #####################################################
 
     #region License ############################################################
@@ -925,42 +932,43 @@ function Get-AclSafely {
     #endregion DownloadLocationNotice #########################################
 
     function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function returns $null if no errors on on the $error stack;
         # Otherwise, function returns a reference (memory pointer) to the last
         # error that occurred.
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         if ($Error.Count -gt 0) {
             return ([ref]($Error[0]))
@@ -970,50 +978,51 @@ function Get-AclSafely {
     }
 
     function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function accepts two positional arguments:
         #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
         #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
         #
         # Function returns $true if it appears that an error occurred; $false
         # otherwise
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         # TO-DO: Validate input
 
@@ -1026,7 +1035,8 @@ function Get-AclSafely {
         } else {
             # One is $null, or both are $null
             # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
+            # could be null if $error was cleared; this does not indicate an
+            # error.
             # So:
             # If both are null, no error
             # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -1097,7 +1107,8 @@ function Get-AclSafely {
     }
 
     trap {
-        # Intentionally left empty to prevent terminating errors from halting processing
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
     }
 
     $refOutputObjThisFolderPermission = $args[0]
@@ -1113,20 +1124,27 @@ function Get-AclSafely {
     # Store current error preference; we will restore it after we do our work
     $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
 
-    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
-    # Terminating errors will not output anything, kick to the empty trap statement and then
-    # continue on. Likewise, non-terminating errors will also not output anything, but they
-    # do not kick to the trap statement; they simply continue on.
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error
+    # output. Terminating errors will not output anything, kick to the empty trap
+    # statement and then continue on. Likewise, non-terminating errors will also
+    # not output anything, but they do not kick to the trap statement; they simply
+    # continue on.
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # This needs to be a one-liner for error handling to work!:
     if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) { $versionPS = Get-PSVersion; if ($versionPS.Major -ge 3) { $objThis = Get-Item -LiteralPath $strThisObjectPath -Force; if ($versionPS -ge ([version]'7.3')) { if (@(Get-Module Microsoft.PowerShell.Security).Count -eq 0) { Import-Module Microsoft.PowerShell.Security } $objThisFolderPermission = [System.IO.FileSystemAclExtensions]::GetAccessControl($objThis) } else { $objThisFolderPermission = $objThis.GetAccessControl() } } elseif ($versionPS.Major -eq 2) { $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force; $objThisFolderPermission = $objThis.GetAccessControl() } else { $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``')) } } else { $objThisFolderPermission = Get-Acl -Path $strThisObjectPath }
     # The above one-liner is a messy variant of the following, which had to be
-    # converted to one line to prevent PowerShell v3 from throwing errors on the stack
-    # when copy-pasted into the shell (despite there not being any apparent error):
-    ###################################################################################
-    # TODO: Get-Acl is slow if there is latency between the folder structure and the domain controller, probably because of SID lookups. See if there is a way to speed this up without introducing external dependencies.
-    # TODO: Get-Acl allegedly does not exist on PowerShell on Linux (specifically at least not on PowerShell Core v6.2.4 on Ubuntu 18.04.4 or PowerShell v7.0.0 on Ubuntu 18.04.4). Confirm this and then re-work the below to get around the issue.
+    # converted to one line to prevent PowerShell v3 from throwing errors on the
+    # stack when copy-pasted into the shell (despite there not being any apparent
+    # error):
+    ###############################################################################
+    # TODO: Get-Acl is slow if there is latency between the folder structure and
+    # the domain controller, probably because of SID lookups. See if there is a way
+    # to speed this up without introducing external dependencies.
+    # TODO: Get-Acl allegedly does not exist on PowerShell on Linux (specifically
+    # at least not on PowerShell Core v6.2.4 on Ubuntu 18.04.4 or PowerShell v7.0.0
+    # on Ubuntu 18.04.4). Confirm this and then re-work the below to get around the
+    # issue.
     # if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
     #     # Can't use Get-Acl because Get-Acl doesn't support paths with brackets
     #     # or grave accent marks (backticks)
@@ -1135,10 +1153,11 @@ function Get-AclSafely {
     #         # PowerShell v3 and newer supports -LiteralPath
     #         $objThis = Get-Item -LiteralPath $strThisObjectPath -Force # -Force parameter is required to get hidden items
     #         if ($versionPS -ge ([version]'7.3')) {
-    #             # PowerShell v7.3 and newer do not have Microsoft.PowerShell.Security
-    #             # automatically loaded; likewise, the .GetAccessControl() method of
-    #             # a folder or file object is missing. So, we need to load the
-    #             # Microsoft.PowerShell.Security module and then call
+    #             # PowerShell v7.3 and newer do not have
+    #             # Microsoft.PowerShell.Security automatically loaded; likewise,
+    #             # the .GetAccessControl() method of a folder or file object is
+    #             # missing. So, we need to load the Microsoft.PowerShell.Security
+    #             # module and then call
     #             # [System.IO.FileSystemAclExtensions]::GetAccessControl()
     #             if (@(Get-Module Microsoft.PowerShell.Security).Count -eq 0) {
     #                 Import-Module Microsoft.PowerShell.Security
@@ -1149,9 +1168,9 @@ function Get-AclSafely {
     #             $objThisFolderPermission = $objThis.GetAccessControl()
     #         }
     #     } elseif ($versionPS.Major -eq 2) {
-    #         # We don't need to escape the right square bracket based on testing, but
-    #         # we do need to escape the left square bracket. Nevertheless, escaping
-    #         # both brackets does work and seems like the safest option.
+    #         # We don't need to escape the right square bracket based on testing,
+    #         # but we do need to escape the left square bracket. Nevertheless,
+    #         # escaping both brackets does work and seems like the safest option.
     #         # Additionally, escape the grave accent mark (backtick).
     #         $objThis = Get-Item -Path ((($strThisObjectPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force # -Force parameter is required to get hidden items
     #         $objThisFolderPermission = $objThis.GetAccessControl()
@@ -1168,7 +1187,7 @@ function Get-AclSafely {
     #     # No square brackets or grave accent marks (backticks); use Get-Acl
     #     $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
     # }
-    ###################################################################################
+    ###############################################################################
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -1191,7 +1210,7 @@ function Get-AclSafely {
 }
 
 function Join-PathSafely {
-    #region FunctionHeader #####################################################
+    #region FunctionHeader #################################################
     # Combines two paths into a single path. This function is intended to be
     # used in situations where the Join-Path cmdlet may fail due to a variety
     # of reasons. This function is designed to suppress errors and return a
@@ -1199,11 +1218,11 @@ function Join-PathSafely {
     #
     # Three positional arguments are required:
     #
-    # The first argument is a reference to a string object that will be populated
-    # with the joined path (parent path + child path). If the operation was
-    # successful, the referenced string object will be populated with the joined
-    # path. If the operation was unsuccessful, the referenced string will be left
-    # unchanged.
+    # The first argument is a reference to a string object that will be
+    # populated with the joined path (parent path + child path). If the
+    # operation was successful, the referenced string object will be populated
+    # with the joined path. If the operation was unsuccessful, the referenced
+    # string will be left unchanged.
     #
     # The second argument is a string representing the parent part of the path.
     #
@@ -1221,7 +1240,224 @@ function Join-PathSafely {
     # $strJoinedPath = $null
     # $boolSuccess = Join-PathSafely ([ref]$strJoinedPath) $strParentPartOfPath $strChildPartOfPath
     #
-    # Version 1.0.20241110.1
+    # Version 1.0.20241211.1
+    #endregion FunctionHeader #################################################
+
+    #region License ########################################################
+    # Copyright (c) 2024 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a
+    # copy of this software and associated documentation files (the
+    # "Software"), to deal in the Software without restriction, including
+    # without limitation the rights to use, copy, modify, merge, publish,
+    # distribute, sublicense, and/or sell copies of the Software, and to permit
+    # persons to whom the Software is furnished to do so, subject to the
+    # following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included
+    # in all copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+    # USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ########################################################
+
+    #region DownloadLocationNotice #########################################
+    # The most up-to-date version of this script can be found on the author's
+    # GitHub repository at:
+    # https://github.com/franklesniak/PowerShell_Resources
+    #endregion DownloadLocationNotice #########################################
+
+    function Get-ReferenceToLastError {
+        #region FunctionHeader #############################################
+        # Function returns $null if no errors on on the $error stack;
+        # Otherwise, function returns a reference (memory pointer) to the last
+        # error that occurred.
+        #
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
+
+        #region License ####################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
+
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #####################################
+
+        if ($Error.Count -gt 0) {
+            return ([ref]($Error[0]))
+        } else {
+            return $null
+        }
+    }
+
+    function Test-ErrorOccurred {
+        #region FunctionHeader #############################################
+        # Function accepts two positional arguments:
+        #
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
+        #
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
+        #
+        # Function returns $true if it appears that an error occurred; $false
+        # otherwise
+        #
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
+
+        #region License ####################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
+
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #####################################
+
+        # TO-DO: Validate input
+
+        $boolErrorOccurred = $false
+        if (($null -ne ($args[0])) -and ($null -ne ($args[1]))) {
+            # Both not $null
+            if ((($args[0]).Value) -ne (($args[1]).Value)) {
+                $boolErrorOccurred = $true
+            }
+        } else {
+            # One is $null, or both are $null
+            # NOTE: ($args[0]) could be non-null, while ($args[1])
+            # could be null if $error was cleared; this does not indicate an
+            # error.
+            # So:
+            # If both are null, no error
+            # If ($args[0]) is null and ($args[1]) is non-null, error
+            # If ($args[0]) is non-null and ($args[1]) is null, no error
+            if (($null -eq ($args[0])) -and ($null -ne ($args[1]))) {
+                $boolErrorOccurred = $true
+            }
+        }
+
+        return $boolErrorOccurred
+    }
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
+    }
+
+    $refOutputJoinedPath = $args[0]
+    $strParentPartOfPath = $args[1]
+    $strChildPartOfPath = $args[2]
+
+    $strJoinedPath = $null
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do our work
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error
+    # output. Terminating errors will not output anything, kick to the empty
+    # trap statement and then continue on. Likewise, non-terminating errors
+    # will also not output anything, but they do not kick to the trap
+    # statement; they simply continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    # Attempt to join the path
+    $strJoinedPath = Join-Path $strParentPartOfPath $strChildPartOfPath
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        return $false
+    } else {
+        $refOutputJoinedPath.Value = $strJoinedPath
+        return $true
+    }
+}
+
+function Get-ChildItemUsingObjectSafely {
+    #region FunctionHeader #####################################################
+    # Gets the child items of an object in a way that suppresses errors. This
+    # function replaces: $obj | Get-ChildItem (see example)
+    #
+    # Two positional arguments are required:
+    #
+    # The first argument is a reference to an array of child objects. If the
+    # operation was successful, the referenced array will be populated with the
+    # child objects returned from Get-ChildItem. If the operation was unsuccessful,
+    # the referenced array may be modified, but its contents would be undefined.
+    #
+    # The second argument is a reference to the parent object. The parent object
+    # will be passed to Get-ChildItem.
+    #
+    # The function returns a boolean value indicating whether the operation was
+    # successful. If the operation was successful, the child items will be
+    # populated in the array object referenced in the first argument. If the
+    # operation was unsuccessful, the referenced array object may still be
+    # modified, but its contents should be considered undefined.
+    #
+    # Example usage:
+    # $objThisFolderItem = Get-Item 'D:\Shares\Share\Data'
+    # $arrChildObjects = @()
+    # $boolSuccess = Get-ChildItemUsingObjectSafely ([ref]$arrChildObjects) ([ref]$objThisFolderItem)
+    #
+    # Version 1.1.20241211.0
     #endregion FunctionHeader #####################################################
 
     #region License ############################################################
@@ -1253,42 +1489,43 @@ function Join-PathSafely {
     #endregion DownloadLocationNotice #############################################
 
     function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function returns $null if no errors on on the $error stack;
         # Otherwise, function returns a reference (memory pointer) to the last
         # error that occurred.
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         if ($Error.Count -gt 0) {
             return ([ref]($Error[0]))
@@ -1298,50 +1535,51 @@ function Join-PathSafely {
     }
 
     function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function accepts two positional arguments:
         #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
         #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
         #
         # Function returns $true if it appears that an error occurred; $false
         # otherwise
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         # TO-DO: Validate input
 
@@ -1354,7 +1592,8 @@ function Join-PathSafely {
         } else {
             # One is $null, or both are $null
             # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
+            # could be null if $error was cleared; this does not indicate an
+            # error.
             # So:
             # If both are null, no error
             # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -1368,14 +1607,12 @@ function Join-PathSafely {
     }
 
     trap {
-        # Intentionally left empty to prevent terminating errors from halting processing
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
     }
 
-    $refOutputJoinedPath = $args[0]
-    $strParentPartOfPath = $args[1]
-    $strChildPartOfPath = $args[2]
-
-    $strJoinedPath = $null
+    $refOutputArrChildObjects = $args[0]
+    $refObjThisFolderItem = $args[1]
 
     # Retrieve the newest error on the stack prior to doing work
     $refLastKnownError = Get-ReferenceToLastError
@@ -1383,14 +1620,14 @@ function Join-PathSafely {
     # Store current error preference; we will restore it after we do our work
     $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
 
-    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
-    # Terminating errors will not output anything, kick to the empty trap statement and then
-    # continue on. Likewise, non-terminating errors will also not output anything, but they
-    # do not kick to the trap statement; they simply continue on.
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error
+    # output. Terminating errors will not output anything, kick to the empty trap
+    # statement and then continue on. Likewise, non-terminating errors will also
+    # not output anything, but they do not kick to the trap statement; they simply
+    # continue on.
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
-    # Attempt to join the path
-    $strJoinedPath = Join-Path $strParentPartOfPath $strChildPartOfPath
+    $refOutputArrChildObjects.Value = @(($refObjThisFolderItem.Value) | Get-ChildItem -Force)
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -1401,168 +1638,7 @@ function Join-PathSafely {
     if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
         return $false
     } else {
-        $refOutputJoinedPath.Value = $strJoinedPath
         return $true
-    }
-}
-
-function Get-ChildItemSafely {
-    # Usage:
-    # $objThisFolderItem = Get-Item 'D:\Shares\Share\Data'
-    # $arrChildObjects = @()
-    # $boolSuccess = Get-ChildItemSafely ([ref]$arrChildObjects) ([ref]$objThisFolderItem)
-
-    # TODO: Write a proper function header
-
-    function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
-        # Function returns $null if no errors on on the $error stack;
-        # Otherwise, function returns a reference (memory pointer) to the last
-        # error that occurred.
-        #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
-
-        #region License ########################################################
-        # Copyright (c) 2024 Frank Lesniak
-        #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
-        # "Software"), to deal in the Software without restriction, including
-        # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
-        #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
-        #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
-
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
-        # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
-
-        if ($Error.Count -gt 0) {
-            return ([ref]($Error[0]))
-        } else {
-            return $null
-        }
-    }
-
-    function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
-        # Function accepts two positional arguments:
-        #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
-        #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
-        #
-        # Function returns $true if it appears that an error occurred; $false
-        # otherwise
-        #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
-
-        #region License ########################################################
-        # Copyright (c) 2024 Frank Lesniak
-        #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
-        # "Software"), to deal in the Software without restriction, including
-        # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
-        #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
-        #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
-
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
-        # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
-
-        # TO-DO: Validate input
-
-        $boolErrorOccurred = $false
-        if (($null -ne ($args[0])) -and ($null -ne ($args[1]))) {
-            # Both not $null
-            if ((($args[0]).Value) -ne (($args[1]).Value)) {
-                $boolErrorOccurred = $true
-            }
-        } else {
-            # One is $null, or both are $null
-            # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
-            # So:
-            # If both are null, no error
-            # If ($args[0]) is null and ($args[1]) is non-null, error
-            # If ($args[0]) is non-null and ($args[1]) is null, no error
-            if (($null -eq ($args[0])) -and ($null -ne ($args[1]))) {
-                $boolErrorOccurred = $true
-            }
-        }
-
-        return $boolErrorOccurred
-    }
-
-    trap {
-        # Intentionally left empty to prevent terminating errors from halting processing
-    }
-
-    $refOutputArrChildObjects = $args[0]
-    $refObjThisFolderItem = $args[1]
-
-    $arrChildObjects = @()
-
-    # Retrieve the newest error on the stack prior to doing work
-    $refLastKnownError = Get-ReferenceToLastError
-
-    # Store current error preference; we will restore it after we do our work
-    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
-
-    # Set ErrorActionPreference to SilentlyContinue; this will suppress error output.
-    # Terminating errors will not output anything, kick to the empty trap statement and then
-    # continue on. Likewise, non-terminating errors will also not output anything, but they
-    # do not kick to the trap statement; they simply continue on.
-    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
-
-    $arrChildObjects = @(($refObjThisFolderItem.Value) | Get-ChildItem -Force)
-
-    # Restore the former error preference
-    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
-
-    # Retrieve the newest error on the error stack
-    $refNewestCurrentError = Get-ReferenceToLastError
-
-    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
-        $false
-    } else {
-        $true
-        $refOutputArrChildObjects.Value = @($arrChildObjects)
     }
 }
 
@@ -3419,7 +3495,7 @@ function Repair-NTFSPermissionsRecursively {
 
                 # Get the child objects
                 $arrChildObjects = $null
-                $boolSuccess = Get-ChildItemSafely ([ref]$arrChildObjects) ([ref]$objThis)
+                $boolSuccess = Get-ChildItemUsingObjectSafely ([ref]$arrChildObjects) ([ref]$objThis)
 
                 if ($boolSuccess -eq $false) {
                     # Error occurred probably because the path length is too long
