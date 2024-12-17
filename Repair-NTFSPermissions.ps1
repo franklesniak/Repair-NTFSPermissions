@@ -2242,7 +2242,7 @@ function Get-ScriptingFileSystemObjectSafely {
     # FileSystemObject COM object. If the object is not created successfully, then
     # the referenced variable becomes undefined.
     #
-    # Version: 1.1.20241216.0
+    # Version: 1.1.20241216.1
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -2411,6 +2411,8 @@ function Get-ScriptingFileSystemObjectSafely {
     }
     #endregion Assign Parameters and Arguments to Internally-Used Variables #######
 
+    # TODO: Validate input
+
     # Retrieve the newest error on the stack prior to doing work
     $refLastKnownError = Get-ReferenceToLastError
 
@@ -2545,7 +2547,7 @@ function Get-DOS83Path {
     $strPath = $args[1]
 
     $objScriptingFileSystemObject = $null
-    $boolSuccess = Get-ScriptingFileSystemObjectSafely ([ref]$objScriptingFileSystemObject)
+    $boolSuccess = Get-ScriptingFileSystemObjectSafely -ReferenceToStoreObject ([ref]$objScriptingFileSystemObject)
     if ($boolSuccess -ne $true) {
         return $false
     } else {
