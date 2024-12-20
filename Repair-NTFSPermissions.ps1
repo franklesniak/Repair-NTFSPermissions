@@ -2233,16 +2233,17 @@ function Get-ScriptingFileSystemObjectSafely {
     # there was an error.
     #
     # .NOTES
-    # This function also supports the use of an argument, which can be used
-    # instead of the parameter.
+    # This function also supports the use of a positional parameter instead of a
+    # named parameter. If a positional parameter is used intead of a named
+    # parameter, then exactly one positional parameter is required:
     #
-    # The first argument and only argument is a reference to an object that will
+    # The first and only positional parameter is a reference to an object that will
     # become the FileSystemObject COM object. If the object is created
     # successfully, then the referenced object will be updated, storing the
     # FileSystemObject COM object. If the object is not created successfully, then
     # the referenced variable becomes undefined.
     #
-    # Version: 1.1.20241216.1
+    # Version: 1.1.20241219.0
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -2272,42 +2273,43 @@ function Get-ScriptingFileSystemObjectSafely {
 
     #region FunctionsToSupportErrorHandling ####################################
     function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function returns $null if no errors on on the $error stack;
         # Otherwise, function returns a reference (memory pointer) to the last
         # error that occurred.
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         if ($Error.Count -gt 0) {
             return ([ref]($Error[0]))
@@ -2317,50 +2319,51 @@ function Get-ScriptingFileSystemObjectSafely {
     }
 
     function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function accepts two positional arguments:
         #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
         #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
         #
         # Function returns $true if it appears that an error occurred; $false
         # otherwise
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         # TO-DO: Validate input
 
@@ -2373,7 +2376,8 @@ function Get-ScriptingFileSystemObjectSafely {
         } else {
             # One is $null, or both are $null
             # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
+            # could be null if $error was cleared; this does not indicate an
+            # error.
             # So:
             # If both are null, no error
             # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -2392,25 +2396,6 @@ function Get-ScriptingFileSystemObjectSafely {
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if ($args.Count -eq 1) {
-        # Arguments may have been supplied instead of parameters
-        if ($null -eq $ReferenceToStoreObject.Value) {
-            # We have one argument and nothing supplied in the parameter
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $refOutput = $ReferenceToStoreObject
-    } else {
-        # Use positional arguments
-        $refOutput = $args[0]
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # TODO: Validate input
 
     # Retrieve the newest error on the stack prior to doing work
@@ -2428,7 +2413,7 @@ function Get-ScriptingFileSystemObjectSafely {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # Do the work of this function...
-    $refOutput.Value = New-Object -ComObject Scripting.FileSystemObject
+    $ReferenceToStoreObject.Value = New-Object -ComObject Scripting.FileSystemObject
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -2450,26 +2435,27 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
     # Get's a Folder object using the Scripting.FileSystemObject COM object.
     #
     # .DESCRIPTION
-    # This function gets a Folder object using the Scripting.FileSystemObject COM
-    # object. If the Folder object is successfully created, then the function
-    # returns $true; otherwise, the function returns $false. If the function
-    # returns $false, then the Folder object is not created, and the referenced
-    # Folder object is undefined.
+    # This function gets a Folder object using the Scripting.FileSystemObject
+    # COM object. If the Folder object is successfully created, then the
+    # function returns $true; otherwise, the function returns $false. If the
+    # function returns $false, then the Folder object is not created, and the
+    # referenced Folder object is undefined.
     #
     # .PARAMETER ReferenceToFolderObject
-    # This parameter is required; it is a reference to an object that will become
-    # the Folder COM object created using Scripting.FileSystemObject. If the object
-    # is created successfully, then the referenced object will be updated, storing
-    # the Folder COM object. If the object is not created successfully, then the
-    # referenced variable becomes undefined.
+    # This parameter is required; it is a reference to an object that will
+    # become the Folder COM object created using Scripting.FileSystemObject. If
+    # the object is created successfully, then the referenced object will be
+    # updated, storing the Folder COM object. If the object is not created
+    # successfully, then the referenced variable becomes undefined.
     #
     # .PARAMETER ReferenceToScriptingFileSystemObject
-    # This parameter is required; it is a reference to a Scripting.FileSystemObject
-    # COM object, which has already been initialized.
+    # This parameter is required; it is a reference to a
+    # Scripting.FileSystemObject COM object, which has already been
+    # initialized.
     #
     # .PARAMETER Path
-    # This parameter is required; it is a string containing the path to the folder
-    # for which this function will obtain the Folder COM object.
+    # This parameter is required; it is a string containing the path to the
+    # folder for which this function will obtain the Folder COM object.
     #
     # .EXAMPLE
     # $strPath = 'D:\Shares\Human Resources\Personnel Information\Employee Files\John Doe'
@@ -2488,50 +2474,53 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
     # Get-FolderObjectSafelyUsingScriptingFileSystemObject.
     #
     # .OUTPUTS
-    # System.Boolean. Get-FolderObjectSafelyUsingScriptingFileSystemObject returns
-    # a boolean value indiciating whether the process completed successfully. $true
-    # means the process completed successfully; $false means there was an error.
+    # System.Boolean. Get-FolderObjectSafelyUsingScriptingFileSystemObject
+    # returns a boolean value indiciating whether the process completed
+    # successfully. $true means the process completed successfully; $false
+    # means there was an error.
     #
     # .NOTES
-    # This function also supports the use of arguments, which can be used
-    # instead of parameters. If arguments are used instead of parameters, then
-    # three positional arguments are required:
+    # This function also supports the use of positional parameters instead of
+    # named parameters. If positional parameters are used intead of named
+    # parameters, then three positional parameters are required:
     #
-    # The first argument is a reference to an object that will become the Folder
-    # COM object created using Scripting.FileSystemObject. If the object is created
-    # successfully, then the referenced object will be updated, storing the Folder
-    # COM object. If the object is not created successfully, then the referenced
-    # variable becomes undefined.
+    # The first positional parameter is a reference to an object that will
+    # become the Folder COM object created using Scripting.FileSystemObject. If
+    # the object is created successfully, then the referenced object will be
+    # updated, storing the Folder COM object. If the object is not created
+    # successfully, then the referenced variable becomes undefined.
     #
-    # The second argument is a reference to a Scripting.FileSystemObject COM
-    # object, which has already been initialized.
+    # The second positional parameter is a reference to a
+    # Scripting.FileSystemObject COM object, which has already been
+    # initialized.
     #
-    # The third argument is a string containing the path to the folder for which
-    # this function will obtain the Folder COM object.
+    # The third positional parameter is a string containing the path to the
+    # folder for which this function will obtain the Folder COM object.
     #
-    # Version: 1.1.20241216.0
+    # Version: 1.1.20241219.0
 
-    #region License ############################################################
+    #region License ########################################################
     # Copyright (c) 2024 Frank Lesniak
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy
-    # of this software and associated documentation files (the "Software"), to deal
-    # in the Software without restriction, including without limitation the rights
-    # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    # copies of the Software, and to permit persons to whom the Software is
-    # furnished to do so, subject to the following conditions:
+    # Permission is hereby granted, free of charge, to any person obtaining a
+    # copy of this software and associated documentation files (the
+    # "Software"), to deal in the Software without restriction, including
+    # without limitation the rights to use, copy, modify, merge, publish,
+    # distribute, sublicense, and/or sell copies of the Software, and to permit
+    # persons to whom the Software is furnished to do so, subject to the
+    # following conditions:
     #
-    # The above copyright notice and this permission notice shall be included in
-    # all copies or substantial portions of the Software.
+    # The above copyright notice and this permission notice shall be included
+    # in all copies or substantial portions of the Software.
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    # SOFTWARE.
-    #endregion License ############################################################
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+    # USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ########################################################
 
     param (
         [ref]$ReferenceToFolderObject = ([ref]$null),
@@ -2539,44 +2528,45 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
         [string]$Path = ''
     )
 
-    #region FunctionsToSupportErrorHandling ####################################
+    #region FunctionsToSupportErrorHandling ################################
     function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function returns $null if no errors on on the $error stack;
         # Otherwise, function returns a reference (memory pointer) to the last
         # error that occurred.
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         if ($Error.Count -gt 0) {
             return ([ref]($Error[0]))
@@ -2586,50 +2576,51 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
     }
 
     function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function accepts two positional arguments:
         #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
         #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
         #
         # Function returns $true if it appears that an error occurred; $false
         # otherwise
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         # TO-DO: Validate input
 
@@ -2642,7 +2633,8 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
         } else {
             # One is $null, or both are $null
             # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
+            # could be null if $error was cleared; this does not indicate an
+            # error.
             # So:
             # If both are null, no error
             # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -2654,54 +2646,31 @@ function Get-FolderObjectSafelyUsingScriptingFileSystemObject {
 
         return $boolErrorOccurred
     }
-    #endregion FunctionsToSupportErrorHandling ####################################
+    #endregion FunctionsToSupportErrorHandling ################################
 
     trap {
         # Intentionally left empty to prevent terminating errors from halting
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if ($args.Count -eq 3) {
-        # Arguments may have been supplied instead of parameters
-        if (($null -eq $ReferenceToFolderObject.Value) -and ($null -eq $ReferenceToScriptingFileSystemObject.Value) -and [string]::IsNullOrEmpty($Path)) {
-            # Parameters were not supplied; use arguments
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $refFSOFolderObject = $ReferenceToFolderObject
-        $refScriptingFileSystemObject = $ReferenceToScriptingFileSystemObject
-        $strPath = $Path
-    } else {
-        # Use positional arguments
-        $refFSOFolderObject = $args[0]
-        $refScriptingFileSystemObject = $args[1]
-        $strPath = $args[2]
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # TODO: Validate input
 
     # Retrieve the newest error on the stack prior to doing work
     $refLastKnownError = Get-ReferenceToLastError
 
-    # Store current error preference; we will restore it after we do the work of
-    # this function
+    # Store current error preference; we will restore it after we do the work
+    # of this function
     $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
 
     # Set ErrorActionPreference to SilentlyContinue; this will suppress error
-    # output. Terminating errors will not output anything, kick to the empty trap
-    # statement and then continue on. Likewise, non-terminating errors will also
-    # not output anything, but they do not kick to the trap statement; they simply
-    # continue on.
+    # output. Terminating errors will not output anything, kick to the empty
+    # trap statement and then continue on. Likewise, non-terminating errors
+    # will also not output anything, but they do not kick to the trap
+    # statement; they simply continue on.
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # Get the folder object
-    $refFSOFolderObject.Value = ($refScriptingFileSystemObject.Value).GetFolder($strPath)
+    $ReferenceToFolderObject.Value = ($ReferenceToScriptingFileSystemObject.Value).GetFolder($Path)
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -2726,23 +2695,24 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
     # This function gets a File object using the Scripting.FileSystemObject COM
     # object. If the File object is successfully created, then the function
     # returns $true; otherwise, the function returns $false. If the function
-    # returns $false, then the File object is not created, and the referenced File
-    # object is undefined.
+    # returns $false, then the File object is not created, and the referenced
+    # File object is undefined.
     #
     # .PARAMETER ReferenceToFileObject
-    # This parameter is required; it is a reference to an object that will become
-    # the File COM object created using Scripting.FileSystemObject. If the object
-    # is created successfully, then the referenced object will be updated, storing
-    # the File COM object. If the object is not created successfully, then the
-    # referenced variable becomes undefined.
+    # This parameter is required; it is a reference to an object that will
+    # become the File COM object created using Scripting.FileSystemObject. If
+    # the object is created successfully, then the referenced object will be
+    # updated, storing the File COM object. If the object is not created
+    # successfully, then the referenced variable becomes undefined.
     #
     # .PARAMETER ReferenceToScriptingFileSystemObject
-    # This parameter is required; it is a reference to a Scripting.FileSystemObject
-    # COM object, which has already been initialized.
+    # This parameter is required; it is a reference to a
+    # Scripting.FileSystemObject COM object, which has already been
+    # initialized.
     #
     # .PARAMETER Path
-    # This parameter is required; it is a string containing the path to the file
-    # for which this function will obtain the File COM object.
+    # This parameter is required; it is a string containing the path to the
+    # file for which this function will obtain the File COM object.
     #
     # .EXAMPLE
     # $strPath = 'D:\Shares\Human Resources\Personnel Information\Employee Files\John Doe\Expenses.xlsx'
@@ -2761,50 +2731,53 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
     # Get-FileObjectSafelyUsingScriptingFileSystemObject.
     #
     # .OUTPUTS
-    # System.Boolean. Get-FileObjectSafelyUsingScriptingFileSystemObject returns a
-    # boolean value indiciating whether the process completed successfully. $true
-    # means the process completed successfully; $false means there was an error.
+    # System.Boolean. Get-FileObjectSafelyUsingScriptingFileSystemObject
+    # returns a boolean value indiciating whether the process completed
+    # successfully. $true means the process completed successfully; $false
+    # means there was an error.
     #
     # .NOTES
-    # This function also supports the use of arguments, which can be used
-    # instead of parameters. If arguments are used instead of parameters, then
-    # three positional arguments are required:
+    # This function also supports the use of positional parameters instead of
+    # named parameters. If positional parameters are used intead of named
+    # parameters, then three positional parameters are required:
     #
-    # The first argument is a reference to an object that will become the File COM
-    # object created using Scripting.FileSystemObject. If the object is created
-    # successfully, then the referenced object will be updated, storing the File
-    # COM object. If the object is not created successfully, then the referenced
-    # variable becomes undefined.
+    # The first positional parameter is a reference to an object that will
+    # become the File COM object created using Scripting.FileSystemObject. If
+    # the object is created successfully, then the referenced object will be
+    # updated, storing the File COM object. If the object is not created
+    # successfully, then the referenced variable becomes undefined.
     #
-    # The second argument is a reference to a Scripting.FileSystemObject COM
-    # object, which has already been initialized.
+    # The second positional parameter is a reference to a
+    # Scripting.FileSystemObject COM object, which has already been
+    # initialized.
     #
-    # The third argument is a string containing the path to the file for which this
-    # function will obtain the File COM object.
+    # The third positional parameter is a string containing the path to the
+    # file for which this function will obtain the File COM object.
     #
-    # Version: 1.1.20241216.0
+    # Version: 1.1.20241219.0
 
-    #region License ############################################################
+    #region License ########################################################
     # Copyright (c) 2024 Frank Lesniak
     #
-    # Permission is hereby granted, free of charge, to any person obtaining a copy
-    # of this software and associated documentation files (the "Software"), to deal
-    # in the Software without restriction, including without limitation the rights
-    # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    # copies of the Software, and to permit persons to whom the Software is
-    # furnished to do so, subject to the following conditions:
+    # Permission is hereby granted, free of charge, to any person obtaining a
+    # copy of this software and associated documentation files (the
+    # "Software"), to deal in the Software without restriction, including
+    # without limitation the rights to use, copy, modify, merge, publish,
+    # distribute, sublicense, and/or sell copies of the Software, and to permit
+    # persons to whom the Software is furnished to do so, subject to the
+    # following conditions:
     #
-    # The above copyright notice and this permission notice shall be included in
-    # all copies or substantial portions of the Software.
+    # The above copyright notice and this permission notice shall be included
+    # in all copies or substantial portions of the Software.
     #
-    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    # SOFTWARE.
-    #endregion License ############################################################
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+    # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+    # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+    # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+    # USE OR OTHER DEALINGS IN THE SOFTWARE.
+    #endregion License ########################################################
 
     param (
         [ref]$ReferenceToFileObject = ([ref]$null),
@@ -2812,44 +2785,45 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
         [string]$Path = ''
     )
 
-    #region FunctionsToSupportErrorHandling ####################################
+    #region FunctionsToSupportErrorHandling ################################
     function Get-ReferenceToLastError {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function returns $null if no errors on on the $error stack;
         # Otherwise, function returns a reference (memory pointer) to the last
         # error that occurred.
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         if ($Error.Count -gt 0) {
             return ([ref]($Error[0]))
@@ -2859,50 +2833,51 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
     }
 
     function Test-ErrorOccurred {
-        #region FunctionHeader #################################################
+        #region FunctionHeader #############################################
         # Function accepts two positional arguments:
         #
-        # The first argument is a reference (memory pointer) to the last error that
-        # had occurred prior to calling the command in question - that is, the
-        # command that we want to test to see if an error occurred.
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
         #
-        # The second argument is a reference to the last error that had occurred
-        # as-of the completion of the command in question.
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
         #
         # Function returns $true if it appears that an error occurred; $false
         # otherwise
         #
-        # Version: 1.0.20241105.0
-        #endregion FunctionHeader #################################################
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
 
-        #region License ########################################################
+        #region License ####################################################
         # Copyright (c) 2024 Frank Lesniak
         #
-        # Permission is hereby granted, free of charge, to any person obtaining a
-        # copy of this software and associated documentation files (the
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
         # "Software"), to deal in the Software without restriction, including
         # without limitation the rights to use, copy, modify, merge, publish,
-        # distribute, sublicense, and/or sell copies of the Software, and to permit
-        # persons to whom the Software is furnished to do so, subject to the
-        # following conditions:
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
         #
-        # The above copyright notice and this permission notice shall be included
-        # in all copies or substantial portions of the Software.
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
         #
-        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-        # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-        # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-        # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-        # USE OR OTHER DEALINGS IN THE SOFTWARE.
-        #endregion License ########################################################
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
 
-        #region DownloadLocationNotice #########################################
-        # The most up-to-date version of this script can be found on the author's
-        # GitHub repository at:
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
         # https://github.com/franklesniak/PowerShell_Resources
-        #endregion DownloadLocationNotice #########################################
+        #endregion DownloadLocationNotice #####################################
 
         # TO-DO: Validate input
 
@@ -2915,7 +2890,8 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
         } else {
             # One is $null, or both are $null
             # NOTE: ($args[0]) could be non-null, while ($args[1])
-            # could be null if $error was cleared; this does not indicate an error.
+            # could be null if $error was cleared; this does not indicate an
+            # error.
             # So:
             # If both are null, no error
             # If ($args[0]) is null and ($args[1]) is non-null, error
@@ -2927,54 +2903,31 @@ function Get-FileObjectSafelyUsingScriptingFileSystemObject {
 
         return $boolErrorOccurred
     }
-    #endregion FunctionsToSupportErrorHandling ####################################
+    #endregion FunctionsToSupportErrorHandling ################################
 
     trap {
         # Intentionally left empty to prevent terminating errors from halting
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if ($args.Count -eq 3) {
-        # Arguments may have been supplied instead of parameters
-        if (($null -eq $ReferenceToFileObject.Value) -and ($null -eq $ReferenceToScriptingFileSystemObject.Value) -and [string]::IsNullOrEmpty($Path)) {
-            # Parameters were not supplied; use arguments
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $refFSOFileObject = $ReferenceToFileObject
-        $refScriptingFileSystemObject = $ReferenceToScriptingFileSystemObject
-        $strPath = $Path
-    } else {
-        # Use positional arguments
-        $refFSOFileObject = $args[0]
-        $refScriptingFileSystemObject = $args[1]
-        $strPath = $args[2]
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # TODO: Validate input
 
     # Retrieve the newest error on the stack prior to doing work
     $refLastKnownError = Get-ReferenceToLastError
 
-    # Store current error preference; we will restore it after we do the work of
-    # this function
+    # Store current error preference; we will restore it after we do the work
+    # of this function
     $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
 
     # Set ErrorActionPreference to SilentlyContinue; this will suppress error
-    # output. Terminating errors will not output anything, kick to the empty trap
-    # statement and then continue on. Likewise, non-terminating errors will also
-    # not output anything, but they do not kick to the trap statement; they simply
-    # continue on.
+    # output. Terminating errors will not output anything, kick to the empty
+    # trap statement and then continue on. Likewise, non-terminating errors
+    # will also not output anything, but they do not kick to the trap
+    # statement; they simply continue on.
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # Get the file object
-    $refFSOFileObject.Value = ($refScriptingFileSystemObject.Value).GetFile($strPath)
+    $ReferenceToFileObject.Value = ($ReferenceToScriptingFileSystemObject.Value).GetFile($Path)
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -3043,24 +2996,24 @@ function Get-DOS83Path {
     # completed successfully; $false means there was an error.
     #
     # .NOTES
-    # This function also supports the use of arguments, which can be used
-    # instead of parameters. If arguments are used instead of parameters, then
-    # two or three positional arguments are required:
+    # This function also supports the use of positional parameters instead of
+    # named parameters. If positional parameters are used intead of named
+    # parameters, then two or three positional parameters are required:
     #
-    # The first argument is a reference to a string. If the process was
-    # successful, the referenced string will be updated to contain the short
-    # DOS 8.3 path. If the process is not successful, then the contents of the
-    # string are undefined.
+    # The first positional parameter is a reference to a string. If the process
+    # was successful, the referenced string will be updated to contain the
+    # short DOS 8.3 path. If the process is not successful, then the contents
+    # of the string are undefined.
     #
-    # The second argument is a string containing the path of the folder or file
-    # for which we want to retrieve its DOS 8.3 file path.
+    # The second positional parameter is a string containing the path of the
+    # folder or file for which we want to retrieve its DOS 8.3 file path.
     #
-    # The third argument is optional. If supplied, it is a reference to a
-    # Scripting.FileSystemObject object. Supplying this parameter can speed up
-    # performance by avoiding to have to create the Scripting.FileSystemObject
-    # every time this function is called.
+    # The third positional parameter is optional. If supplied, it is a
+    # reference to a Scripting.FileSystemObject object. Supplying this
+    # parameter can speed up performance by avoiding to have to create the
+    # Scripting.FileSystemObject every time this function is called.
     #
-    # Version: 1.1.20241217.0
+    # Version: 1.1.20241219.0
 
     #region License ########################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -3245,16 +3198,17 @@ function Get-DOS83Path {
         # there was an error.
         #
         # .NOTES
-        # This function also supports the use of an argument, which can be used
-        # instead of the parameter.
+        # This function also supports the use of a positional parameter instead of a
+        # named parameter. If a positional parameter is used intead of a named
+        # parameter, then exactly one positional parameter is required:
         #
-        # The first argument and only argument is a reference to an object that will
+        # The first and only positional parameter is a reference to an object that will
         # become the FileSystemObject COM object. If the object is created
         # successfully, then the referenced object will be updated, storing the
         # FileSystemObject COM object. If the object is not created successfully, then
         # the referenced variable becomes undefined.
         #
-        # Version: 1.1.20241217.0
+        # Version: 1.1.20241219.0
 
         #region License ############################################################
         # Copyright (c) 2024 Frank Lesniak
@@ -3407,25 +3361,6 @@ function Get-DOS83Path {
             # processing
         }
 
-        #region Assign Parameters and Arguments to Internally-Used Variables #######
-        $boolUseArguments = $false
-        if ($args.Count -eq 1) {
-            # Arguments may have been supplied instead of parameters
-            if ($null -eq $ReferenceToStoreObject.Value) {
-                # We have one argument and nothing supplied in the parameter
-                $boolUseArguments = $true
-            }
-        }
-
-        if (-not $boolUseArguments) {
-            # Use parameters
-            $refOutput = $ReferenceToStoreObject
-        } else {
-            # Use positional arguments
-            $refOutput = $args[0]
-        }
-        #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
         # TODO: Validate input
 
         # Retrieve the newest error on the stack prior to doing work
@@ -3443,7 +3378,7 @@ function Get-DOS83Path {
         $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
         # Do the work of this function...
-        $refOutput.Value = New-Object -ComObject Scripting.FileSystemObject
+        $ReferenceToStoreObject.Value = New-Object -ComObject Scripting.FileSystemObject
 
         # Restore the former error preference
         $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -3510,23 +3445,24 @@ function Get-DOS83Path {
         # means there was an error.
         #
         # .NOTES
-        # This function also supports the use of arguments, which can be used
-        # instead of parameters. If arguments are used instead of parameters, then
-        # three positional arguments are required:
+        # This function also supports the use of positional parameters instead of
+        # named parameters. If positional parameters are used intead of named
+        # parameters, then three positional parameters are required:
         #
-        # The first argument is a reference to an object that will become the
-        # Folder COM object created using Scripting.FileSystemObject. If the object
-        # is created successfully, then the referenced object will be updated,
-        # storing the Folder COM object. If the object is not created successfully,
-        # then the referenced variable becomes undefined.
+        # The first positional parameter is a reference to an object that will
+        # become the Folder COM object created using Scripting.FileSystemObject. If
+        # the object is created successfully, then the referenced object will be
+        # updated, storing the Folder COM object. If the object is not created
+        # successfully, then the referenced variable becomes undefined.
         #
-        # The second argument is a reference to a Scripting.FileSystemObject COM
-        # object, which has already been initialized.
+        # The second positional parameter is a reference to a
+        # Scripting.FileSystemObject COM object, which has already been
+        # initialized.
         #
-        # The third argument is a string containing the path to the folder for
-        # which this function will obtain the Folder COM object.
+        # The third positional parameter is a string containing the path to the
+        # folder for which this function will obtain the Folder COM object.
         #
-        # Version: 1.1.20241217.0
+        # Version: 1.1.20241219.0
 
         #region License ########################################################
         # Copyright (c) 2024 Frank Lesniak
@@ -3682,29 +3618,6 @@ function Get-DOS83Path {
             # processing
         }
 
-        #region Assign Parameters and Arguments to Internally-Used Variables ###
-        $boolUseArguments = $false
-        if ($args.Count -eq 3) {
-            # Arguments may have been supplied instead of parameters
-            if (($null -eq $ReferenceToFolderObject.Value) -and ($null -eq $ReferenceToScriptingFileSystemObject.Value) -and [string]::IsNullOrEmpty($Path)) {
-                # Parameters were not supplied; use arguments
-                $boolUseArguments = $true
-            }
-        }
-
-        if (-not $boolUseArguments) {
-            # Use parameters
-            $refFSOFolderObject = $ReferenceToFolderObject
-            $refScriptingFileSystemObject = $ReferenceToScriptingFileSystemObject
-            $strPath = $Path
-        } else {
-            # Use positional arguments
-            $refFSOFolderObject = $args[0]
-            $refScriptingFileSystemObject = $args[1]
-            $strPath = $args[2]
-        }
-        #endregion Assign Parameters and Arguments to Internally-Used Variables ###
-
         # TODO: Validate input
 
         # Retrieve the newest error on the stack prior to doing work
@@ -3722,7 +3635,7 @@ function Get-DOS83Path {
         $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
         # Get the folder object
-        $refFSOFolderObject.Value = ($refScriptingFileSystemObject.Value).GetFolder($strPath)
+        $ReferenceToFolderObject.Value = ($ReferenceToScriptingFileSystemObject.Value).GetFolder($Path)
 
         # Restore the former error preference
         $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -3789,23 +3702,24 @@ function Get-DOS83Path {
         # means there was an error.
         #
         # .NOTES
-        # This function also supports the use of arguments, which can be used
-        # instead of parameters. If arguments are used instead of parameters, then
-        # three positional arguments are required:
+        # This function also supports the use of positional parameters instead of
+        # named parameters. If positional parameters are used intead of named
+        # parameters, then three positional parameters are required:
         #
-        # The first argument is a reference to an object that will become the File
-        # COM object created using Scripting.FileSystemObject. If the object is
-        # created successfully, then the referenced object will be updated, storing
-        # the File COM object. If the object is not created successfully, then the
-        # referenced variable becomes undefined.
+        # The first positional parameter is a reference to an object that will
+        # become the File COM object created using Scripting.FileSystemObject. If
+        # the object is created successfully, then the referenced object will be
+        # updated, storing the File COM object. If the object is not created
+        # successfully, then the referenced variable becomes undefined.
         #
-        # The second argument is a reference to a Scripting.FileSystemObject COM
-        # object, which has already been initialized.
+        # The second positional parameter is a reference to a
+        # Scripting.FileSystemObject COM object, which has already been
+        # initialized.
         #
-        # The third argument is a string containing the path to the file for which
-        # this function will obtain the File COM object.
+        # The third positional parameter is a string containing the path to the
+        # file for which this function will obtain the File COM object.
         #
-        # Version: 1.1.20241217.0
+        # Version: 1.1.20241219.0
 
         #region License ########################################################
         # Copyright (c) 2024 Frank Lesniak
@@ -3961,29 +3875,6 @@ function Get-DOS83Path {
             # processing
         }
 
-        #region Assign Parameters and Arguments to Internally-Used Variables ###
-        $boolUseArguments = $false
-        if ($args.Count -eq 3) {
-            # Arguments may have been supplied instead of parameters
-            if (($null -eq $ReferenceToFileObject.Value) -and ($null -eq $ReferenceToScriptingFileSystemObject.Value) -and [string]::IsNullOrEmpty($Path)) {
-                # Parameters were not supplied; use arguments
-                $boolUseArguments = $true
-            }
-        }
-
-        if (-not $boolUseArguments) {
-            # Use parameters
-            $refFSOFileObject = $ReferenceToFileObject
-            $refScriptingFileSystemObject = $ReferenceToScriptingFileSystemObject
-            $strPath = $Path
-        } else {
-            # Use positional arguments
-            $refFSOFileObject = $args[0]
-            $refScriptingFileSystemObject = $args[1]
-            $strPath = $args[2]
-        }
-        #endregion Assign Parameters and Arguments to Internally-Used Variables ###
-
         # TODO: Validate input
 
         # Retrieve the newest error on the stack prior to doing work
@@ -4001,7 +3892,7 @@ function Get-DOS83Path {
         $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
         # Get the file object
-        $refFSOFileObject.Value = ($refScriptingFileSystemObject.Value).GetFile($strPath)
+        $ReferenceToFileObject.Value = ($ReferenceToScriptingFileSystemObject.Value).GetFile($Path)
 
         # Restore the former error preference
         $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -4023,33 +3914,8 @@ function Get-DOS83Path {
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if (($args.Count -ge 2) -or ($args.Count -le 3)) {
-        # Arguments may have been supplied instead of parameters
-        if (($null -eq $ReferenceToDOS8Dot3Path.Value) -and ([string]::IsNullOrEmpty($Path)) -and ($null -eq $ReferenceToScriptingFileSystemObject.Value)) {
-            # All parameters are uninitialized; arguments were definitely used
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $refDOS83Path = $ReferenceToDOS8Dot3Path
-        $strPath = $Path
-        $refScriptingFileSystemObject = $ReferenceToScriptingFileSystemObject
-    } else {
-        # Use positional arguments
-        $refDOS83Path = $args[0]
-        $strPath = $args[1]
-        if ($args.Count -gt 2) {
-            $refScriptingFileSystemObject = $args[2]
-        }
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # Get the Scripting.FileSystemObject if necessary
-    if ($null -eq $refScriptingFileSystemObject.Value) {
+    if ($null -eq $ReferenceToScriptingFileSystemObject.Value) {
         $boolUseReferencedFSO = $false
         $objScriptingFileSystemObject = $null
         $boolSuccess = Get-ScriptingFileSystemObjectSafely -ReferenceToStoreObject ([ref]$objScriptingFileSystemObject)
@@ -4066,16 +3932,16 @@ function Get-DOS83Path {
     $objFSOFolderOrFileObject = $null
     # Try to retrieve a folder object first
     if ($boolUseReferencedFSO) {
-        $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject -ReferenceToFolderObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject $refScriptingFileSystemObject -Path $strPath
+        $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject -ReferenceToFolderObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject $ReferenceToScriptingFileSystemObject -Path $Path
     } else {
-        $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject -ReferenceToFolderObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject ([ref]$objScriptingFileSystemObject) -Path $strPath
+        $boolSuccess = Get-FolderObjectSafelyUsingScriptingFileSystemObject -ReferenceToFolderObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject ([ref]$objScriptingFileSystemObject) -Path $Path
     }
     if ($boolSuccess -eq $false) {
         # Failed to retrieve folder object; perhaps it's a file?
         if ($boolUseReferencedFSO) {
-            $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject -ReferenceToFileObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject $refScriptingFileSystemObject -Path $strPath
+            $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject -ReferenceToFileObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject $ReferenceToScriptingFileSystemObject -Path $Path
         } else {
-            $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject -ReferenceToFileObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject ([ref]$objScriptingFileSystemObject) -Path $strPath
+            $boolSuccess = Get-FileObjectSafelyUsingScriptingFileSystemObject -ReferenceToFileObject ([ref]$objFSOFolderOrFileObject) -ReferenceToScriptingFileSystemObject ([ref]$objScriptingFileSystemObject) -Path $Path
         }
         if ($boolSuccess -eq $false) {
             # Error occurred
@@ -4099,7 +3965,7 @@ function Get-DOS83Path {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # Access the short path
-    $refDOS83Path.Value = $objFSOFolderOrFileObject.ShortPath
+    $ReferenceToDOS8Dot3Path.Value = $objFSOFolderOrFileObject.ShortPath
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -4224,12 +4090,12 @@ function Test-ValidSID {
     # $false means the supplied object was not a SID.
     #
     # .NOTES
-    # This function also supports the use of an argument instead of a
-    # parameter. If an argument is supplied instead of the parameter, then one
-    # positional argument is required: it is a reference to an object that will
-    # be tested to determine if it is a SID.
+    # This function also supports the use of a positional parameter instead of a
+    # named parameter. If a positional parameter is used intead of a named
+    # parameter, then one positional parameters is required: it is a reference to
+    # an object that will be tested to determine if it is a SID.
     #
-    # Version: 3.0.20241217.0
+    # Version: 3.0.20241219.0
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -4389,26 +4255,6 @@ function Test-ValidSID {
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if ($args.Count -eq 1) {
-        # Arguments may have been supplied instead of parameters
-        if ($null -eq $ReferenceToObject.Value) {
-            # No valid data was supplied via a parameter, so assume arguments
-            # were used
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $refObjectToTest = $ReferenceToObject
-    } else {
-        # Use positional arguments
-        $refObjectToTest = $args[0]
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # TODO: Validate input
 
     # Retrieve the newest error on the stack prior to doing work
@@ -4428,7 +4274,7 @@ function Test-ValidSID {
     # This shouldn't error, even if the referenced object is not a SID, but we play
     # it safe and store the result in $objSID. $objSID should be $null if the
     # referenced object is not a SID
-    $objSID = ($refObjectToTest.Value) -as [System.Security.Principal.SecurityIdentifier]
+    $objSID = ($ReferenceToObject.Value) -as [System.Security.Principal.SecurityIdentifier]
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -4496,25 +4342,25 @@ function Remove-SpecificAccessRuleRobust {
     # process completed successfully; $false means there was an error.
     #
     # .NOTES
-    # This function also supports the use of arguments, which can be used
-    # instead of parameters. If arguments are used instead of parameters, then
-    # four positional arguments are required:
+    # This function also supports the use of positional parameters instead of named
+    # parameters. If positional parameters are used intead of named parameters,
+    # then four positional parameters are required:
     #
-    # The first argument is an integer indicating the current attempt number. When
-    # calling this function for the first time, it should be 1.
+    # The first positional parameter is an integer indicating the current attempt
+    # number. When calling this function for the first time, it should be 1.
     #
-    # The second argument is an integer representing the maximum number of attempts
-    # that the function will observe before giving up.
+    # The second positional parameter is an integer representing the maximum number
+    # of attempts that the function will observe before giving up.
     #
-    # The third argument is a reference to a
+    # The third positional parameter is a reference to a
     # System.Security.AccessControl.DirectorySecurity or similar object from which
     # the access control entry will be removed.
     #
-    # The fourth argument is a reference to a
+    # The fourth positional parameter is a reference to a
     # System.Security.AccessControl.FileSystemAccessRule or similar object that
     # will be removed from the access control list.
     #
-    # Version: 1.1.20241217.0
+    # Version: 1.1.20241219.0
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -4670,32 +4516,6 @@ function Remove-SpecificAccessRuleRobust {
         # processing
     }
 
-    #region Assign Parameters and Arguments to Internally-Used Variables #######
-    $boolUseArguments = $false
-    if ($args.Count -eq 4) {
-        # Arguments may have been supplied instead of parameters
-        if (($CurrentAttemptNumber -eq 1) -and ($MaxAttempts -eq 1) -and ($null -eq $ReferenceToAccessControlListObject.Value) -and ($null -eq $ReferenceToAccessRuleObject.Value)) {
-            # Parameters all match default values, so it's safe to say that
-            # arguments were used instead of parameters
-            $boolUseArguments = $true
-        }
-    }
-
-    if (-not $boolUseArguments) {
-        # Use parameters
-        $intCurrentAttemptNumber = $CurrentAttemptNumber
-        $intMaximumAttempts = $MaxAttempts
-        $refAccessControlSecurity = $ReferenceToAccessControlListObject
-        $refAccessControlAccessRule = $ReferenceToAccessRuleObject
-    } else {
-        # Use positional arguments
-        $intCurrentAttemptNumber = $args[0]
-        $intMaximumAttempts = $args[1]
-        $refAccessControlSecurity = $args[2]
-        $refAccessControlAccessRule = $args[3]
-    }
-    #endregion Assign Parameters and Arguments to Internally-Used Variables #######
-
     # TODO: Validate input
 
     # Retrieve the newest error on the stack prior to doing work
@@ -4713,7 +4533,7 @@ function Remove-SpecificAccessRuleRobust {
     $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
     # Remove the access rule/access control entry from the list
-    ($refAccessControlSecurity.Value).RemoveAccessRuleSpecific($refAccessControlAccessRule.Value)
+    ($ReferenceToAccessControlListObject.Value).RemoveAccessRuleSpecific($ReferenceToAccessRuleObject.Value)
 
     # Restore the former error preference
     $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
@@ -4723,10 +4543,10 @@ function Remove-SpecificAccessRuleRobust {
 
     if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
         # Error occurred
-        if ($intCurrentAttemptNumber -lt $intMaximumAttempts) {
-            Start-Sleep -Seconds ([math]::Pow(2, $intCurrentAttemptNumber))
+        if ($CurrentAttemptNumber -lt $MaxAttempts) {
+            Start-Sleep -Seconds ([math]::Pow(2, $CurrentAttemptNumber))
 
-            $objResultIndicator = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber ($intCurrentAttemptNumber + 1) -MaxAttempts $intMaximumAttempts -ReferenceToAccessControlListObject $refAccessControlSecurity -ReferenceToAccessRuleObject $refAccessControlAccessRule
+            $objResultIndicator = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber ($CurrentAttemptNumber + 1) -MaxAttempts $MaxAttempts -ReferenceToAccessControlListObject $ReferenceToAccessControlListObject -ReferenceToAccessRuleObject $ReferenceToAccessRuleObject
             return $objResultIndicator
         } else {
             # Number of attempts exceeded maximum; return failure indicator:
@@ -4735,6 +4555,238 @@ function Remove-SpecificAccessRuleRobust {
     } else {
         # No error occurred; return success indicator:
         return $true
+    }
+}
+
+function Test-TypeNameAvailability {
+    # .SYNOPSIS
+    # Tests to see if a type is available.
+    #
+    # .DESCRIPTION
+    # Determines if a type name is available for use. Returns $true if the type
+    # name is available in the current context; returns $false if it is not
+    # available.
+    #
+    # .PARAMETER TypeName
+    # This parameter is required; it is a string that contains the name of the type
+    # for which the function will determine availability.
+    #
+    # .EXAMPLE
+    # $boolTypeAvailable = Test-TypeNameAvailability -TypeName 'Microsoft.Exchange.Data.RecipientAccessRight'
+    #
+    # .EXAMPLE
+    # $boolTypeAvailable = Test-TypeNameAvailability 'Microsoft.Exchange.Data.RecipientAccessRight'
+    #
+    # .INPUTS
+    # None. You can't pipe objects to Test-TypeNameAvailability.
+    #
+    # .OUTPUTS
+    # System.Boolean. Test-TypeNameAvailability returns a boolean value indicating
+    # whether the type is available in the current context. The function returns
+    # $true if the type name is available in the current context; $false otherwise.
+    #
+    # .NOTES
+    # This function also supports the use of a positional parameter instead of a
+    # named parameter. If a positional parameter is used intead of a named
+    # parameter, then exactly one positional parameters is required: it is a string
+    # that contains the name of the type for which the function will determine
+    # availability.
+    #
+    # Version: 2.0.20241220.0
+
+    #region License ############################################################
+    # Copyright (c) 2024 Frank Lesniak
+    #
+    # Permission is hereby granted, free of charge, to any person obtaining a copy
+    # of this software and associated documentation files (the "Software"), to deal
+    # in the Software without restriction, including without limitation the rights
+    # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    # copies of the Software, and to permit persons to whom the Software is
+    # furnished to do so, subject to the following conditions:
+    #
+    # The above copyright notice and this permission notice shall be included in
+    # all copies or substantial portions of the Software.
+    #
+    # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    # SOFTWARE.
+    #endregion License ############################################################
+
+    #region Acknowledgements ###################################################
+    # This function is derived from a chat with OpenAI's ChatGPT:
+    # https://chatgpt.com/share/67659f90-1d90-8006-a127-8d2d0b897054
+    # retrieved on 2024-12-20
+    #endregion Acknowledgements ###################################################
+
+    param (
+        [string]$TypeName = ''
+    )
+
+    #region FunctionsToSupportErrorHandling ####################################
+    function Get-ReferenceToLastError {
+        #region FunctionHeader #############################################
+        # Function returns $null if no errors on on the $error stack;
+        # Otherwise, function returns a reference (memory pointer) to the last
+        # error that occurred.
+        #
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
+
+        #region License ####################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
+
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #####################################
+
+        if ($Error.Count -gt 0) {
+            return ([ref]($Error[0]))
+        } else {
+            return $null
+        }
+    }
+
+    function Test-ErrorOccurred {
+        #region FunctionHeader #############################################
+        # Function accepts two positional arguments:
+        #
+        # The first argument is a reference (memory pointer) to the last error
+        # that had occurred prior to calling the command in question - that is,
+        # the command that we want to test to see if an error occurred.
+        #
+        # The second argument is a reference to the last error that had
+        # occurred as-of the completion of the command in question.
+        #
+        # Function returns $true if it appears that an error occurred; $false
+        # otherwise
+        #
+        # Version: 1.0.20241211.0
+        #endregion FunctionHeader #############################################
+
+        #region License ####################################################
+        # Copyright (c) 2024 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining
+        # a copy of this software and associated documentation files (the
+        # "Software"), to deal in the Software without restriction, including
+        # without limitation the rights to use, copy, modify, merge, publish,
+        # distribute, sublicense, and/or sell copies of the Software, and to
+        # permit persons to whom the Software is furnished to do so, subject to
+        # the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be
+        # included in all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+        # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+        # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+        # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+        # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+        # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+        # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ####################################################
+
+        #region DownloadLocationNotice #####################################
+        # The most up-to-date version of this script can be found on the
+        # author's GitHub repository at:
+        # https://github.com/franklesniak/PowerShell_Resources
+        #endregion DownloadLocationNotice #####################################
+
+        # TO-DO: Validate input
+
+        $boolErrorOccurred = $false
+        if (($null -ne ($args[0])) -and ($null -ne ($args[1]))) {
+            # Both not $null
+            if ((($args[0]).Value) -ne (($args[1]).Value)) {
+                $boolErrorOccurred = $true
+            }
+        } else {
+            # One is $null, or both are $null
+            # NOTE: ($args[0]) could be non-null, while ($args[1])
+            # could be null if $error was cleared; this does not indicate an
+            # error.
+            # So:
+            # If both are null, no error
+            # If ($args[0]) is null and ($args[1]) is non-null, error
+            # If ($args[0]) is non-null and ($args[1]) is null, no error
+            if (($null -eq ($args[0])) -and ($null -ne ($args[1]))) {
+                $boolErrorOccurred = $true
+            }
+        }
+
+        return $boolErrorOccurred
+    }
+    #endregion FunctionsToSupportErrorHandling ####################################
+
+    trap {
+        # Intentionally left empty to prevent terminating errors from halting
+        # processing
+    }
+
+    # TODO: Perform additional input validation
+    if ([string]::IsNullOrEmpty($TypeName)) {
+        return $false
+    }
+
+    # Retrieve the newest error on the stack prior to doing work
+    $refLastKnownError = Get-ReferenceToLastError
+
+    # Store current error preference; we will restore it after we do the work of
+    # this function
+    $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+    # Set ErrorActionPreference to SilentlyContinue; this will suppress error
+    # output. Terminating errors will not output anything, kick to the empty trap
+    # statement and then continue on. Likewise, non-terminating errors will also
+    # not output anything, but they do not kick to the trap statement; they simply
+    # continue on.
+    $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+    # Test to see if the type name is available
+    $boolTypeNameAvailable = @([System.AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType($TypeName) } | Where-Object { $_ }).Count -ge 1
+
+    # Restore the former error preference
+    $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+    # Retrieve the newest error on the error stack
+    $refNewestCurrentError = Get-ReferenceToLastError
+
+    if (Test-ErrorOccurred $refLastKnownError $refNewestCurrentError) {
+        # Error occurred; we're not returning a failure indicator, though.
+
+        return $boolTypeNameAvailable
+    } else {
+        # No error occurred; but, again, we're not returning a success code.
+
+        return $boolTypeNameAvailable
     }
 }
 
