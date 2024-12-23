@@ -133,7 +133,7 @@
 # existing permissions are not known or documented (and even if they are known or
 # documented, it can be time-consuming and disruptive to business to re-apply them).
 #
-# Version 1.1.20241223.0
+# Version 1.1.20241223.1
 
 [CmdletBinding()]
 
@@ -5761,25 +5761,28 @@ function Repair-NTFSPermissionsRecursively {
         } else {
             # Able to read the permissions of the parent folder, continue
 
-            if ($versionPS -eq ([version]'1.0')) {
-                # The object returned from Get-Acl is not copy-able on PowerShell 1.0
-                # Not sure why...
-                # So, we need to get the ACL directly and hope that we don't have an error this time
-                if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
-                    # PowerShell v1
-                    # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-                    # So, we need to use Get-Acl
-                    #
-                    # Unfortunately, there does not seem to be any way to escape a left
-                    # square bracket in a path passed to Get-Acl. But those paths
-                    # should have already thrown an error - so we stick with only
-                    # escaping a grave accent mark/backtick.
-                    $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``'))
-                } else {
-                    # No square brackets; use Get-Acl
-                    $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
-                }
-            }
+            # TODO: Review this more closely; I don't believe this is necessary
+            # anymore because Get-AclSafely now returns the permission object
+            # without needing to copy it
+            # if ($versionPS -eq ([version]'1.0')) {
+            #     # The object returned from Get-Acl is not copy-able on PowerShell 1.0
+            #     # Not sure why...
+            #     # So, we need to get the ACL directly and hope that we don't have an error this time
+            #     if ($strThisObjectPath.Contains('[') -or $strThisObjectPath.Contains(']') -or $strThisObjectPath.Contains('`')) {
+            #         # PowerShell v1
+            #         # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
+            #         # So, we need to use Get-Acl
+            #         #
+            #         # Unfortunately, there does not seem to be any way to escape a left
+            #         # square bracket in a path passed to Get-Acl. But those paths
+            #         # should have already thrown an error - so we stick with only
+            #         # escaping a grave accent mark/backtick.
+            #         $objThisFolderPermission = Get-Acl -Path ($strThisObjectPath.Replace('`', '``'))
+            #     } else {
+            #         # No square brackets; use Get-Acl
+            #         $objThisFolderPermission = Get-Acl -Path $strThisObjectPath
+            #     }
+            # }
 
             if ($null -eq $objThisFolderPermission) {
                 # An error did not occur retrieving permissions; however no permissions were retrieved
@@ -6061,14 +6064,17 @@ function Repair-NTFSPermissionsRecursively {
                     $boolCriticalErrorOccurred = $true
                     return $intFunctionReturn
                 } else {
-                    if ($versionPS -eq ([version]'1.0')) {
-                        # The object returned from Get-Acl is not copy-able on
-                        # PowerShell 1.0
-                        # Not sure why...
-                        # So, we need to get the ACL directly and hope that we don't
-                        # have an error this time
-                        $objThisFolderPermission = Get-Acl
-                    }
+                    # TODO: Review this more closely; I don't believe this is
+                    # necessary anymore because Get-AclSafely now returns the
+                    # permission object without needing to copy it
+                    # if ($versionPS -eq ([version]'1.0')) {
+                    #     # The object returned from Get-Acl is not copy-able on
+                    #     # PowerShell 1.0
+                    #     # Not sure why...
+                    #     # So, we need to get the ACL directly and hope that we don't
+                    #     # have an error this time
+                    #     $objThisFolderPermission = Get-Acl
+                    # }
 
                     $arrACEs = @($objThisFolderPermission.Access)
 
