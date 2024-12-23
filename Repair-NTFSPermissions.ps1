@@ -4322,16 +4322,97 @@ function Remove-SpecificAccessRuleRobust {
     # will be removed from the access control list.
     #
     # .EXAMPLE
-    # $item = Get-Item 'D:\Shared\Human_Resources'
-    # $directorySecurity = $item.GetAccessControl()
-    # $arrFileSystemAccessRules = @($directorySecurity.Access)
-    # $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 8 -ReferenceToAccessControlListObject ([ref]$directorySecurity) -ReferenceToAccessRuleObject ([ref]($arrFileSystemAccessRules[0]))
+    # $boolCheckForType = $true
+    # $boolRunGetAcl = $true
+    # $strPath = 'D:\Shared\Human_Resources'
+    # if ($strPath.Length -gt 248) {
+    #     if ($strPath.Substring(0, 2) -eq '\\') {
+    #         $strPath = '\\?\UNC\' + $strPath.Substring(2)
+    #     } else {
+    #         $strPath = '\\?\' + $strPath
+    #     }
+    # }
+    # $objDirectoryInfo = Get-Item -Path $strPath
+    # if (@(@($objDirectoryInfo.PSObject.Methods) | Where-Object { $_.Name -eq 'GetAccessControl' }).Count -ge 1) {
+    #     # The GetAccessControl() method is available on .NET Framework 2.x - 4.x
+    #     $objDirectorySecurity = $objDirectoryInfo.GetAccessControl()
+    # } else {
+    #     # The GetAccessControl() method is not available - this is expected on
+    #     # PowerShell Core 6.x and later
+    #     if ($boolCheckForType) {
+    #         $boolTypeNameAvailable = @([System.AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('System.IO.FileSystemAclExtensions') } | Where-Object { $_ }).Count -ge 1
+    #         if (-not $boolTypeNameAvailable) {
+    #             Add-Type -AssemblyName System.IO.FileSystem.AccessControl
+    #             $boolCheckForType = $false
+    #         }
+    #     }
+    #     $objDirectorySecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($objDirectoryInfo)
+    #     # $objDirectorySecurity is created but may appear empty/uninitialized.
+    #     # This is because the object is missing additional properties that
+    #     # correspond to the way that PowerShell displays this object. You can fix
+    #     # this by running Get-Acl on any other object that has an ACL; once you
+    #     # do that, the $objDirectorySecurity object will have the "missing"
+    #     # properties and will display correctly in the console.
+    #     if ($boolRunGetAcl) {
+    #         $arrCommands = @(Get-Command -Name 'Get-Acl' -ErrorAction SilentlyContinue)
+    #         if ($arrCommands.Count -gt 0) {
+    #             [void](Get-Acl -Path $HOME)
+    #         }
+    #         $boolRunGetAcl = $false
+    #     }
+    # }
+    # $arrFileSystemAccessRules = @($objDirectorySecurity.Access)
     #
-    # .EXAMPLE
-    # $item = Get-Item 'D:\Shared\Human_Resources'
-    # $directorySecurity = $item.GetAccessControl()
-    # $arrFileSystemAccessRules = @($directorySecurity.Access)
-    # $boolSuccess = Remove-SpecificAccessRuleRobust 1 8 ([ref]$directorySecurity) ([ref]($arrFileSystemAccessRules[0]))
+    # # Pick a random access control entry to remove:
+    # $objAccessRuleToRemove = $arrFileSystemAccessRules[0]
+    #
+    # if ($objAccessRuleToRemove.IsInherited) {
+    #     # If the access rule is inherited, we need to disable inheritance in the
+    #     # access control list first
+    #     $objDirectorySecurity.SetAccessRuleProtection($true, $true)
+    #     if (@(@($objDirectoryInfo.PSObject.Methods) | Where-Object { $_.Name -eq 'SetAccessControl' }).Count -ge 1) {
+    #         # The SetAccessControl() method is available on .NET Framework 2.x - 4.x
+    #         # Disable inheritance
+    #         $objDirectoryInfo.SetAccessControl($objDirectorySecurity)
+    #         # Re-fetch the access control list
+    #         $objDirectorySecurity = $objDirectoryInfo.GetAccessControl()
+    #         # Re-choose the access control entry to remove
+    #         $arrFileSystemAccessRules = @($objDirectorySecurity.Access)
+    #         $objAccessRuleToRemove = $arrFileSystemAccessRules[0]
+    #     } else {
+    #         # The SetAccessControl() method is not available - this is expected on
+    #         # PowerShell Core 6.x and later
+    #         if ($boolCheckForType) {
+    #             $boolTypeNameAvailable = @([System.AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('System.IO.FileSystemAclExtensions') } | Where-Object { $_ }).Count -ge 1
+    #             if (-not $boolTypeNameAvailable) {
+    #                 Add-Type -AssemblyName System.IO.FileSystem.AccessControl
+    #             }
+    #         }
+    #         # Disable inheritance
+    #         [System.IO.FileSystemAclExtensions]::SetAccessControl($objDirectoryInfo, $objDirectorySecurity)
+    #         # Re-fetch the access control list
+    #         $objDirectorySecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($objDirectoryInfo)
+    #         # $objDirectorySecurity is created but may appear empty/uninitialized.
+    #         # This is because the object is missing additional properties that
+    #         # correspond to the way that PowerShell displays this object. You can fix
+    #         # this by running Get-Acl on any other object that has an ACL; once you
+    #         # do that, the $objDirectorySecurity object will have the "missing"
+    #         # properties and will display correctly in the console.
+    #         if ($boolRunGetAcl) {
+    #             $arrCommands = @(Get-Command -Name 'Get-Acl' -ErrorAction SilentlyContinue)
+    #             if ($arrCommands.Count -gt 0) {
+    #                 [void](Get-Acl -Path $HOME)
+    #             }
+    #             $boolRunGetAcl = $false
+    #         }
+    #         # Re-choose the access control entry to remove
+    #         $arrFileSystemAccessRules = @($objDirectorySecurity.Access)
+    #         $objAccessRuleToRemove = $arrFileSystemAccessRules[0]
+    #     }
+    # }
+    #
+    # # Remove the access rule
+    # $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 8 -ReferenceToAccessControlListObject ([ref]$objDirectorySecurity) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToRemove)
     #
     # .INPUTS
     # None. You can't pipe objects to Remove-SpecificAccessRuleRobust.
@@ -4360,7 +4441,7 @@ function Remove-SpecificAccessRuleRobust {
     # System.Security.AccessControl.FileSystemAccessRule or similar object that
     # will be removed from the access control list.
     #
-    # Version: 1.1.20241219.0
+    # Version: 1.1.20241223.0
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -6238,6 +6319,10 @@ function Repair-NTFSPermissionsRecursively {
         }
     }
     return $intFunctionReturn
+}
+
+if (-not (Test-TypeNameAvailability -TypeName 'System.IO.FileSystemAclExtensions')) {
+    Add-Type -AssemblyName System.IO.FileSystem.AccessControl
 }
 
 $hashtableKnownSIDs = $null
