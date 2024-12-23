@@ -4303,6 +4303,11 @@ function Remove-SpecificAccessRuleRobust {
     # (i.e., without throwing any errors should the process fail) and in a way that
     # automaticaly retries if an error occurs.
     #
+    # The specified access rule being removed must not be inherited. If the access
+    # rule is inherited, the function will attempt to remove the access rule but
+    # will not succeed in doing so; yet will not throw an error. See the example
+    # for a demonstration of how to handle inherited access rules.
+    #
     # .PARAMETER CurrentAttemptNumber
     # This parameter is required; it is an integer indicating the current attempt
     # number. When calling this function for the first time, it should be 1.
@@ -4441,7 +4446,7 @@ function Remove-SpecificAccessRuleRobust {
     # System.Security.AccessControl.FileSystemAccessRule or similar object that
     # will be removed from the access control list.
     #
-    # Version: 1.1.20241223.0
+    # Version: 1.1.20241223.1
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
