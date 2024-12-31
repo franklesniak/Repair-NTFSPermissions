@@ -3196,14 +3196,27 @@ function Wait-PathToBeNotReady {
     # A boolean value indiciating whether the path is unavailable
     #
     # .NOTES
-    # Version: 1.0.20241216.0
-
-    param (
-        [System.Management.Automation.PSReference]$ReferenceToUseGetPSDriveWorkaround = ([ref]$null),
-        [string]$Path,
-        [int]$MaximumWaitTimeInSeconds = 10,
-        [switch]$DoNotAttemptGetPSDriveWorkaround
-    )
+    # This function also supports the use of positional parameters instead of named
+    # parameters. If positional parameters are used intead of named parameters,
+    # then two to three positional parameters are required:
+    #
+    # The first positional parameter is a memory reference to a boolean variable
+    # that indicates whether or not the Get-PSDrive workaround should be used. If
+    # the Get-PSDrive workaround is used, then the function will use the
+    # Get-PSDrive cmdlet to refresh PowerShell's "understanding" of the available
+    # drive letters. This variable is passed by reference to ensure that this
+    # function can set the variable to $true if the Get-PSDrive workaround is
+    # successful - which improves performance of subsequent runs.
+    #
+    # The second positional parameter is a string containing the path to be tested
+    # for availability.
+    #
+    # The third positional parameter is optional; if supplied, it is the maximum
+    # amount of seconds to wait for the path to be ready. If the path is not ready
+    # within this time, then the function will return $false. By default, this
+    # parameter is set to 10 seconds.
+    #
+    # Version: 1.0.20241231.0
 
     #region License ############################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -3226,6 +3239,13 @@ function Wait-PathToBeNotReady {
     # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     # SOFTWARE.
     #endregion License ############################################################
+
+    param (
+        [System.Management.Automation.PSReference]$ReferenceToUseGetPSDriveWorkaround = ([ref]$null),
+        [string]$Path,
+        [int]$MaximumWaitTimeInSeconds = 10,
+        [switch]$DoNotAttemptGetPSDriveWorkaround
+    )
 
     #region Process Input ######################################################
     if ([string]::IsNullOrEmpty($Path) -eq $true) {
