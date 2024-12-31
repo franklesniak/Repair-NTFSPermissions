@@ -467,25 +467,34 @@ function Test-ErrorOccurred {
 #endregion FunctionsToSupportErrorHandling
 
 function Get-PSVersion {
-    #region FunctionHeader #################################################
-    # Returns the version of PowerShell that is running, including on the
-    # original release of Windows PowerShell (version 1.0)
+    # .SYNOPSIS
+    # Returns the version of PowerShell that is running.
     #
-    # Example:
-    # Get-PSVersion
+    # .DESCRIPTION
+    # The function outputs a [version] object representing the version of
+    # PowerShell that is running.
     #
-    # This example returns the version of PowerShell that is running. On
-    # versions of PowerShell greater than or equal to version 2.0, this
+    # On versions of PowerShell greater than or equal to version 2.0, this
     # function returns the equivalent of $PSVersionTable.PSVersion
     #
-    # The function outputs a [version] object representing the version of
-    # PowerShell that is running
-    #
     # PowerShell 1.0 does not have a $PSVersionTable variable, so this function
-    # returns [version]('1.0') on PowerShell 1.0
+    # returns [version]('1.0') on PowerShell 1.0.
     #
-    # Version 1.0.20241105.0
-    #endregion FunctionHeader #################################################
+    # .EXAMPLE
+    # $versionPS = Get-PSVersion
+    # # $versionPS now contains the version of PowerShell that is running. On
+    # # versions of PowerShell greater than or equal to version 2.0, this
+    # # function returns the equivalent of $PSVersionTable.PSVersion
+    #
+    # .INPUTS
+    # None. You can't pipe objects to Get-PSVersion.
+    #
+    # .OUTPUTS
+    # System.Version. Get-PSVersion returns a [version] value indiciating
+    # the version of PowerShell that is running.
+    #
+    # .NOTES
+    # Version: 1.0.20241225.0
 
     #region License ########################################################
     # Copyright (c) 2024 Frank Lesniak
@@ -509,12 +518,6 @@ function Get-PSVersion {
     # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
     # USE OR OTHER DEALINGS IN THE SOFTWARE.
     #endregion License ########################################################
-
-    #region DownloadLocationNotice #########################################
-    # The most up-to-date version of this script can be found on the author's
-    # GitHub repository at:
-    # https://github.com/franklesniak/PowerShell_Resources
-    #endregion DownloadLocationNotice #########################################
 
     if (Test-Path variable:\PSVersionTable) {
         return ($PSVersionTable.PSVersion)
