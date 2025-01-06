@@ -151,9 +151,9 @@ param (
     [Parameter(Mandatory = $false)][string]$PathToCSVContainingKnownSIDs = $null
 )
 
-# TODO: Comment-based help, [CmdletBinding()], and [Parameter()] type statements in the
-# param() block format are not supported by PowerShell 1.0. Need to investigate an
-# alternative format that will work with PowerShell 1.0.
+# TODO: [CmdletBinding()], and [Parameter()] type statements in the param() block
+# format are not supported by PowerShell 1.0. Need to investigate an alternative format
+# that will work with PowerShell 1.0.
 
 #region License ####################################################################
 # Copyright (c) 2024 Frank Lesniak
