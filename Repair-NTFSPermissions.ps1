@@ -5189,10 +5189,10 @@ function Repair-NTFSPermissionsRecursively {
         # System.Security.AccessControl.FileSecurity, or similar object that will be
         # written to the target object.
         #
-        # Version: 2.0.20241223.2
+        # Version: 2.0.20250106.2
 
         #region License ############################################################
-        # Copyright (c) 2024 Frank Lesniak
+        # Copyright (c) 2025 Frank Lesniak
         #
         # Permission is hereby granted, free of charge, to any person obtaining a copy
         # of this software and associated documentation files (the "Software"), to deal
@@ -5503,8 +5503,8 @@ function Repair-NTFSPermissionsRecursively {
             # available.
             #
             # .PARAMETER TypeName
-            # This parameter is required; it is a string that contains the name of the type
-            # for which the function will determine availability.
+            # This parameter is required; it is a string that contains the name of the
+            # type for which the function will determine availability.
             #
             # .EXAMPLE
             # $boolTypeAvailable = Test-TypeNameAvailability -TypeName 'Microsoft.Exchange.Data.RecipientAccessRight'
@@ -5516,52 +5516,54 @@ function Repair-NTFSPermissionsRecursively {
             # None. You can't pipe objects to Test-TypeNameAvailability.
             #
             # .OUTPUTS
-            # System.Boolean. Test-TypeNameAvailability returns a boolean value indicating
-            # whether the type is available in the current context. The function returns
-            # $true if the type name is available in the current context; $false otherwise.
+            # System.Boolean. Test-TypeNameAvailability returns a boolean value
+            # indicating whether the type is available in the current context. The
+            # function returns $true if the type name is available in the current
+            # context; $false otherwise.
             #
             # .NOTES
-            # This function also supports the use of a positional parameter instead of a
-            # named parameter. If a positional parameter is used intead of a named
-            # parameter, then exactly one positional parameters is required: it is a string
-            # that contains the name of the type for which the function will determine
-            # availability.
+            # This function also supports the use of a positional parameter instead of
+            # a named parameter. If a positional parameter is used intead of a named
+            # parameter, then exactly one positional parameters is required: it is a
+            # string that contains the name of the type for which the function will
+            # determine availability.
             #
-            # Version: 2.0.20241223.0
+            # Version: 2.0.20250106.0
 
-            #region License ############################################################
-            # Copyright (c) 2024 Frank Lesniak
+            #region License ########################################################
+            # Copyright (c) 2025 Frank Lesniak
             #
-            # Permission is hereby granted, free of charge, to any person obtaining a copy
-            # of this software and associated documentation files (the "Software"), to deal
-            # in the Software without restriction, including without limitation the rights
-            # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-            # copies of the Software, and to permit persons to whom the Software is
-            # furnished to do so, subject to the following conditions:
+            # Permission is hereby granted, free of charge, to any person obtaining a
+            # copy of this software and associated documentation files (the
+            # "Software"), to deal in the Software without restriction, including
+            # without limitation the rights to use, copy, modify, merge, publish,
+            # distribute, sublicense, and/or sell copies of the Software, and to permit
+            # persons to whom the Software is furnished to do so, subject to the
+            # following conditions:
             #
-            # The above copyright notice and this permission notice shall be included in
-            # all copies or substantial portions of the Software.
+            # The above copyright notice and this permission notice shall be included
+            # in all copies or substantial portions of the Software.
             #
-            # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-            # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-            # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-            # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-            # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-            # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-            # SOFTWARE.
-            #endregion License ############################################################
+            # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+            # OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+            # NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+            # DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+            # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+            # USE OR OTHER DEALINGS IN THE SOFTWARE.
+            #endregion License ########################################################
 
-            #region Acknowledgements ###################################################
+            #region Acknowledgements ###############################################
             # This function is derived from a chat with OpenAI's ChatGPT:
             # https://chatgpt.com/share/67659f90-1d90-8006-a127-8d2d0b897054
             # retrieved on 2024-12-20
-            #endregion Acknowledgements ###################################################
+            #endregion Acknowledgements ###############################################
 
             param (
                 [string]$TypeName = ''
             )
 
-            #region FunctionsToSupportErrorHandling ####################################
+            #region FunctionsToSupportErrorHandling ################################
             function Get-ReferenceToLastError {
                 # .SYNOPSIS
                 # Gets a reference (memory pointer) to the last error that occurred.
@@ -5823,7 +5825,7 @@ function Repair-NTFSPermissionsRecursively {
 
                 return $boolErrorOccurred
             }
-            #endregion FunctionsToSupportErrorHandling ####################################
+            #endregion FunctionsToSupportErrorHandling ################################
 
             trap {
                 # Intentionally left empty to prevent terminating errors from halting
@@ -5838,15 +5840,15 @@ function Repair-NTFSPermissionsRecursively {
             # Retrieve the newest error on the stack prior to doing work
             $refLastKnownError = Get-ReferenceToLastError
 
-            # Store current error preference; we will restore it after we do the work of
-            # this function
+            # Store current error preference; we will restore it after we do the work
+            # of this function
             $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
 
             # Set ErrorActionPreference to SilentlyContinue; this will suppress error
-            # output. Terminating errors will not output anything, kick to the empty trap
-            # statement and then continue on. Likewise, non-terminating errors will also
-            # not output anything, but they do not kick to the trap statement; they simply
-            # continue on.
+            # output. Terminating errors will not output anything, kick to the empty
+            # trap statement and then continue on. Likewise, non-terminating errors
+            # will also not output anything, but they do not kick to the trap
+            # statement; they simply continue on.
             $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
 
             # Test to see if the type name is available
