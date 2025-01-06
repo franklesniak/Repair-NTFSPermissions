@@ -156,7 +156,7 @@ param (
 # that will work with PowerShell 1.0.
 
 #region License ####################################################################
-# Copyright (c) 2024 Frank Lesniak
+# Copyright (c) 2025 Frank Lesniak
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this
 # software and associated documentation files (the "Software"), to deal in the Software
