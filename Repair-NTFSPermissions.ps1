@@ -133,27 +133,7 @@
 # existing permissions are not known or documented (and even if they are known or
 # documented, it can be time-consuming and disruptive to business to re-apply them).
 #
-# Version 1.1.20241223.1
-
-[CmdletBinding()]
-
-param (
-    [Parameter(Mandatory = $true)][string]$PathToFix,
-    [Parameter(Mandatory = $false)][string]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = 'Administrators',
-    [Parameter(Mandatory = $false)][string]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl = 'BUILTIN\Administrators',
-    [Parameter(Mandatory = $false)][string]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls = 'SYSTEM',
-    [Parameter(Mandatory = $false)][string]$NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM',
-    [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $null,
-    [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $null,
-    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $null,
-    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $null,
-    [Parameter(Mandatory = $false)][switch]$RemoveUnresolvedSIDs,
-    [Parameter(Mandatory = $false)][string]$PathToCSVContainingKnownSIDs = $null
-)
-
-# TODO: [CmdletBinding()], and [Parameter()] type statements in the param() block
-# format are not supported by PowerShell 1.0. Need to investigate an alternative format
-# that will work with PowerShell 1.0.
+# Version 1.1.20250106.0
 
 #region License ####################################################################
 # Copyright (c) 2025 Frank Lesniak
@@ -175,6 +155,26 @@ param (
 # CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 # OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #endregion License ####################################################################
+
+[CmdletBinding()]
+
+param (
+    [Parameter(Mandatory = $true)][string]$PathToFix,
+    [Parameter(Mandatory = $false)][string]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = 'Administrators',
+    [Parameter(Mandatory = $false)][string]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl = 'BUILTIN\Administrators',
+    [Parameter(Mandatory = $false)][string]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls = 'SYSTEM',
+    [Parameter(Mandatory = $false)][string]$NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM',
+    [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $null,
+    [Parameter(Mandatory = $false)][string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $null,
+    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $null,
+    [Parameter(Mandatory = $false)][string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $null,
+    [Parameter(Mandatory = $false)][switch]$RemoveUnresolvedSIDs,
+    [Parameter(Mandatory = $false)][string]$PathToCSVContainingKnownSIDs = $null
+)
+
+# TODO: [CmdletBinding()], and [Parameter()] type statements in the param() block
+# format are not supported by PowerShell 1.0. Need to investigate an alternative format
+# that will work with PowerShell 1.0.
 
 #region Convert Param Block Inputs to More-Traditional Variables ###################
 # This makes it easier to run this script on PowerShell v1.0, which does not support
