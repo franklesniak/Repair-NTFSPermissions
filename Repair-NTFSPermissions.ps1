@@ -180,6 +180,9 @@ if ([string]::IsNullOrEmpty($PathToFix)) {
 
 # TODO: Stop doing this!
 #region Convert Param Block Inputs to More-Traditional Variables ###################
+
+# TODO: Some of these variables are accessed from the Repair-NTFSPermissionsRecursively
+# function; this needs to be fixed/cleaned up
 $strPathToFix = $PathToFix
 $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
 $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl = $NameOfBuiltInAdministratorsGroupAccordingToGetAcl
