@@ -133,7 +133,7 @@
 # existing permissions are not known or documented (and even if they are known or
 # documented, it can be time-consuming and disruptive to business to re-apply them).
 #
-# Version 1.1.20250106.0
+# Version 1.1.20250107.0
 
 #region License ####################################################################
 # Copyright (c) 2025 Frank Lesniak
@@ -172,39 +172,6 @@ param (
     [switch]$RemoveUnresolvedSIDs,
     [string]$PathToCSVContainingKnownSIDs = $null
 )
-
-if ([string]::IsNullOrEmpty($PathToFix)) {
-    Write-Warning 'The PathToFix parameter is required.'
-    return
-}
-
-# TODO: Stop doing this!
-#region Convert Param Block Inputs to More-Traditional Variables ###################
-
-# TODO: Some of these variables are accessed from the Repair-NTFSPermissionsRecursively
-# function; this needs to be fixed/cleaned up
-$strPathToFix = $PathToFix
-$strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
-$strNameOfBuiltInAdministratorsGroupAccordingToGetAcl = $NameOfBuiltInAdministratorsGroupAccordingToGetAcl
-$strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = $NameOfSYSTEMAccountAccordingToTakeOwnAndICacls
-$strNameOfSYSTEMAccountGroupAccordingToGetAcl = $NameOfSYSTEMAccountGroupAccordingToGetAcl
-$strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls
-$strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
-$strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
-$strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
-if ($null -eq $RemoveUnresolvedSIDs) {
-    $boolRemoveUnresolvedSIDs = $false
-} else {
-    if ($RemoveUnresolvedSIDs.IsPresent -eq $false) {
-        $boolRemoveUnresolvedSIDs = $false
-    } else {
-        $boolRemoveUnresolvedSIDs = $true
-    }
-}
-$strPathToCSVContainingKnownSIDs = $PathToCSVContainingKnownSIDs
-#endregion Convert Param Block Inputs to More-Traditional Variables ###################
-
-# TODO: additional code/logic is necessary for adding a read-only account, see TODO markers below
 
 function Repair-NTFSPermissionsRecursively {
     # .SYNOPSIS
@@ -260,6 +227,67 @@ function Repair-NTFSPermissionsRecursively {
     # troubleshoot or fix issues much more easily (vs. having to try to guess what a
     # substituted drive or symbolic link points to).
     #
+    # .PARAMETER ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of the local administrators group. Supplying this
+    # parameter may be necessary on non-English systems, where the name of the local
+    # administrators group may be different. This parameter is used when taking
+    # ownership of the file or folder and when applying permissions using icacls.exe.
+    # If a reference is not specified, the default value of 'Administrators' will be
+    # used.
+    #
+    # .PARAMETER ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of the local administrators group. Supplying this
+    # parameter may be necessary on non-English systems, where the name of the local
+    # administrators group may be different. This parameter is used when getting the
+    # ACL of the file or folder in PowerShell via Get-Acl. If a reference is not
+    # specified, the script will use 'BUILTIN\Administrators'.
+    #
+    # .PARAMETER ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of the SYSTEM account. Supplying this parameter may be
+    # necessary on non-English systems, where the name of the SYSTEM account may be
+    # different. This parameter is used when taking ownership of the file or folder and
+    # when applying permissions using icacls.exe. If a reference is not specified, the
+    # script will use 'SYSTEM'.
+    #
+    # .PARAMETER ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of the SYSTEM account. Supplying this parameter may be
+    # necessary on non-English systems, where the name of the SYSTEM account may be
+    # different. This parameter is used when getting the ACL of the file or folder in
+    # PowerShell via Get-Acl. If a reference is not specified, the script will use
+    # 'NT AUTHORITY\SYSTEM'.
+    #
+    # .PARAMETER ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of an additional account or group to be granted full
+    # control. This parameter is used when applying permissions using icacls.exe. If a
+    # reference is not specified, the script will not attempt to add full control
+    # permissions for an additional account or group.
+    #
+    # .PARAMETER ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of an additional account or group to be granted full
+    # control. This parameter is used when getting the ACL of the file or folder in
+    # PowerShell via Get-Acl. If a reference is not specified, the script will not
+    # attempt to add full control permissions for an additional account or group.
+    #
+    # .PARAMETER ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of an additional account or group to be granted read-
+    # only access. This parameter is used when applying permissions using icacls.exe.
+    # If a reference is not specified, the script will not attempt to add read-only
+    # permissions for an additional account or group.
+    #
+    # .PARAMETER ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
+    # This parameter is optional; if supplied, it is a memory reference (pointer) to a
+    # string containing the name of an additional account or group to be granted read-
+    # only access. This parameter is used when getting the ACL of the file or folder in
+    # PowerShell via Get-Acl. If a reference is not specified, the script will not
+    # attempt to add read-only permissions for an additional account or group.
+    #
     # .PARAMETER RunWithoutRecursion
     # This parameter is optional; if supplied, it is a switch parameter that indicates
     # that the function should not run with recursion on the specified item. This is
@@ -297,7 +325,7 @@ function Repair-NTFSPermissionsRecursively {
     # .NOTES
     # This function also supports the use of positional parameters instead of named
     # parameters. If positional parameters are used intead of named parameters,
-    # then one to six positional parameters are required:
+    # then one to fourteen positional parameters are required:
     #
     # The first positional parameter is a string that contains the path to the object
     # that we are working on. The path could be a shortened one through the the use of
@@ -335,7 +363,62 @@ function Repair-NTFSPermissionsRecursively {
     # to troubleshoot or fix issues much more easily (vs. having to try to guess what a
     # substituted drive or symbolic link points to).
     #
-    # Version: 2.0.20250106.0
+    # The seventh positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of the local administrators
+    # group. Supplying this parameter may be necessary on non-English systems, where
+    # the name of the local administrators group may be different. This parameter is
+    # used when taking ownership of the file or folder and when applying permissions
+    # using icacls.exe. If a reference is not specified, the default value of
+    # 'Administrators' will be used.
+    #
+    # The eighth positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of the local administrators
+    # group. Supplying this parameter may be necessary on non-English systems, where
+    # the name of the local administrators group may be different. This parameter is
+    # used when getting the ACL of the file or folder in PowerShell via Get-Acl. If a
+    # reference is not specified, the script will use 'BUILTIN\Administrators'.
+    #
+    # The ninth positional parameter is optional; if supplied, it is a memory reference
+    # (pointer) to a string containing the name of the SYSTEM account. Supplying this
+    # parameter may be necessary on non-English systems, where the name of the SYSTEM
+    # account may be different. This parameter is used when taking ownership of the
+    # file or folder and when applying permissions using icacls.exe. If a reference is
+    # not specified, the script will use 'SYSTEM'.
+    #
+    # The tenth positional parameter is optional; if supplied, it is a memory reference
+    # (pointer) to a string containing the name of the SYSTEM account. Supplying this
+    # parameter may be necessary on non-English systems, where the name of the SYSTEM
+    # account may be different. This parameter is used when getting the ACL of the file
+    # or folder in PowerShell via Get-Acl. If a reference is not specified, the script
+    # will use 'NT AUTHORITY\SYSTEM'.
+    #
+    # The eleventh positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of an additional account or
+    # group to be granted full control. This parameter is used when applying
+    # permissions using icacls.exe. If a reference is not specified, the script will
+    # not attempt to add full control permissions for an additional account or group.
+    #
+    # The twelfth positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of an additional account or
+    # group to be granted full control. This parameter is used when getting the ACL of
+    # the file or folder in PowerShell via Get-Acl. If a reference is not specified,
+    # the script will not attempt to add full control permissions for an additional
+    # account or group.
+    #
+    # The thirteenth positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of an additional account or
+    # group to be granted read-only access. This parameter is used when applying
+    # permissions using icacls.exe. If a reference is not specified, the script will
+    # not attempt to add read-only permissions for an additional account or group.
+    #
+    # The fourteenth positional parameter is optional; if supplied, it is a memory
+    # reference (pointer) to a string containing the name of an additional account or
+    # group to be granted read-only access. This parameter is used when getting the ACL
+    # of the file or folder in PowerShell via Get-Acl. If a reference is not specified,
+    # the script will not attempt to add read-only permissions for an additional
+    # account or group.
+    #
+    # Version: 2.1.20250107.0
 
     #region License ############################################################
     # Copyright (c) 2025 Frank Lesniak
@@ -366,6 +449,14 @@ function Repair-NTFSPermissionsRecursively {
         [string]$LastShortenedPath = '',
         [ref]$ReferenceToHashtableOfKnownSIDs = [ref]$null,
         [string]$RealPath = '',
+        [string]$ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = [ref]$null,
+        [string]$ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl = [ref]$null,
+        [string]$ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = [ref]$null,
+        [string]$ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl = [ref]$null,
+        [string]$ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$null,
+        [string]$ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = [ref]$null,
+        [string]$ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$null,
+        [string]$ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = [ref]$null,
         [switch]$RunWithoutRecursion,
         [switch]$IgnorePathLengthLimits,
         [switch]$DOS8dot3PathBeingUsed
@@ -6130,6 +6221,62 @@ function Repair-NTFSPermissionsRecursively {
         $refToRealPath = [ref]$RealPath
     }
 
+    if ($null -eq $ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls.Value) {
+        $NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = 'Administrators'
+        $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = [ref]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
+    } else {
+        $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = $ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
+    }
+
+    if ($null -eq $ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+        $NameOfBuiltInAdministratorsGroupAccordingToGetAcl = 'BUILTIN\Administrators'
+        $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl = [ref]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl
+    } else {
+        $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl = $ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl
+    }
+
+    if ($null -eq $ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls.Value) {
+        $NameOfSYSTEMAccountAccordingToTakeOwnAndICacls = 'SYSTEM'
+        $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = [ref]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls
+    } else {
+        $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = $ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls
+    }
+
+    if ($null -eq $ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+        $NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM'
+        $refNameOfSYSTEMAccountGroupAccordingToGetAcl = [ref]$NameOfSYSTEMAccountGroupAccordingToGetAcl
+    } else {
+        $refNameOfSYSTEMAccountGroupAccordingToGetAcl = $ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl
+    }
+
+    if ($null -eq $ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value) {
+        $NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = ''
+        $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls
+    } else {
+        $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls
+    }
+
+    if ($null -eq $ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
+        $NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = ''
+        $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = [ref]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+    } else {
+        $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+    }
+
+    if ($null -eq $ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls.Value) {
+        $NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = ''
+        $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
+    } else {
+        $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
+    }
+
+    if ($null -eq $ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
+        $NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = ''
+        $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = [ref]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
+    } else {
+        $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
+    }
+
     #region Process Switch Parameters ##############################################
     $boolAllowRecursion = $true
     if ($null -ne $RunWithoutRecursion) {
@@ -6233,7 +6380,7 @@ function Repair-NTFSPermissionsRecursively {
                     # recursion turned off
                     Write-Verbose ('The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
                     # Rerun without recursion and with path length ignoring mode enabled
-                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion -IgnorePathLengthLimits
+                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                     $intFunctionReturn = $intReturnCode
                     return $intFunctionReturn
                 } else {
@@ -6246,7 +6393,7 @@ function Repair-NTFSPermissionsRecursively {
                         # recursion turned off
                         Write-Verbose ('The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.')
                         # Rerun without recursion and with path length ignoring mode enabled
-                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion -IgnorePathLengthLimits
+                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                         $intFunctionReturn = $intReturnCode
                         return $intFunctionReturn
                     } else {
@@ -6278,7 +6425,7 @@ function Repair-NTFSPermissionsRecursively {
                                 Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                 $intReturnCode = -1
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -6360,7 +6507,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                     $intReturnCode = -2
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                 }
 
                                 if ($intReturnCode -lt 0) {
@@ -6447,10 +6594,10 @@ function Repair-NTFSPermissionsRecursively {
                         Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path)
                         if ($boolIgnorePathLengthLimits) {
                             # Run in DOS 8.3 path mode and ignore path length limits
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -DOS8dot3PathBeingUsed -IgnorePathLengthLimits
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -DOS8dot3PathBeingUsed -IgnorePathLengthLimits
                         } else {
                             # Run in DOS 8.3 path mode
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -DOS8dot3PathBeingUsed
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -DOS8dot3PathBeingUsed
                         }
                         return $intReturnCode
                     }
@@ -6536,17 +6683,17 @@ function Repair-NTFSPermissionsRecursively {
             $boolSYSTEMAccountDenyEntryFound = $false
             $boolSYSTEMAccountHasSufficientAccess = $false
             $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-            if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
             }
             $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-            if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                 $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
             }
 
             $arrACEs | ForEach-Object {
                 $objThisACE = $_
-                if ($objThisACE.IdentityReference.Value -eq $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl) {
+                if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
                     if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                         $boolBuiltInAdministratorsDenyEntryFound = $true
                     } else {
@@ -6562,7 +6709,7 @@ function Repair-NTFSPermissionsRecursively {
                             }
                         }
                     }
-                } elseif ($objThisACE.IdentityReference.Value -eq $strNameOfSYSTEMAccountGroupAccordingToGetAcl) {
+                } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
                     if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                         $boolSYSTEMAccountDenyEntryFound = $true
                     } else {
@@ -6583,9 +6730,9 @@ function Repair-NTFSPermissionsRecursively {
                     $boolFoundGroup = $false
 
                     if ($boolFoundGroup -eq $false) {
-                        if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+                        if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                             # Check the additional administrator account/group
-                            if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                            if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
                                 $boolFoundGroup = $true
                                 if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                     $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
@@ -6607,9 +6754,9 @@ function Repair-NTFSPermissionsRecursively {
                     }
 
                     if ($boolFoundGroup -eq $false) {
-                        if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+                        if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                             # Check the additional administrator account/group
-                            if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                            if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
                                 $boolFoundGroup = $true
                                 if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                     $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
@@ -6634,27 +6781,27 @@ function Repair-NTFSPermissionsRecursively {
                 }
             }
 
-            if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $true) {
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $true) {
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
             }
-            if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $true) {
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $true) {
                 $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
             }
 
             if ($boolBuiltInAdministratorsDenyEntryFound) {
-                Write-Warning ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                Write-Warning ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                 $boolBuiltInAdministratorsHaveSufficientAccess = $false
             }
             if ($boolSYSTEMAccountDenyEntryFound) {
-                Write-Warning ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                Write-Warning ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                 $boolSYSTEMAccountHasSufficientAccess = $false
             }
             if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                Write-Warning ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                Write-Warning ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
             }
             if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                Write-Warning ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                Write-Warning ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                 $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
             }
 
@@ -6668,16 +6815,16 @@ function Repair-NTFSPermissionsRecursively {
             $strAllCommandsInThisSection = ''
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false) {
-                Write-Verbose ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
+                Write-Verbose ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for administrators
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls.Value + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls.Value + ':(F)"'
                 }
                 if ($IterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -6688,16 +6835,16 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolSYSTEMAccountHasSufficientAccess -eq $false) {
-                Write-Verbose ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
+                Write-Verbose ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for SYSTEM
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls.Value + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfSYSTEMAccountAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls.Value + ':(F)"'
                 }
                 if ($IterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -6708,16 +6855,16 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false) {
-                Write-Verbose ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
+                Write-Verbose ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional administrator
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(NP)(F)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls + ':(F)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(F)"'
                 }
                 if ($IterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -6728,16 +6875,16 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
-                Write-Verbose ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
+                Write-Verbose ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional read only account
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 if ($objThis.PSIsContainer) {
                     # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(NP)(RX)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(NP)(RX)"'
                 } else {
                     # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls + ':(RX)"'
+                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(RX)"'
                 }
                 if ($IterativeRepairState -le 1) {
                     $strCommand += ' 2>&1'
@@ -6781,17 +6928,17 @@ function Repair-NTFSPermissionsRecursively {
                     $boolSYSTEMAccountDenyEntryFound = $false
                     $boolSYSTEMAccountHasSufficientAccess = $false
                     $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-                    if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+                    if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                         $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
                     }
                     $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-                    if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+                    if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                         $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
                     }
 
                     $arrACEs | ForEach-Object {
                         $objThisACE = $_
-                        if ($objThisACE.IdentityReference.Value -eq $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl) {
+                        if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
                             if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 $boolBuiltInAdministratorsDenyEntryFound = $true
                             } else {
@@ -6807,7 +6954,7 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                 }
                             }
-                        } elseif ($objThisACE.IdentityReference.Value -eq $strNameOfSYSTEMAccountGroupAccordingToGetAcl) {
+                        } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
                             if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 $boolSYSTEMAccountDenyEntryFound = $true
                             } else {
@@ -6828,9 +6975,9 @@ function Repair-NTFSPermissionsRecursively {
                             $boolFoundGroup = $false
 
                             if ($boolFoundGroup -eq $false) {
-                                if ([string]::IsNullOrEmpty($strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                                     # Check the additional administrator account/group
-                                    if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                                    if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
                                         $boolFoundGroup = $true
                                         if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                             $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
@@ -6852,9 +6999,9 @@ function Repair-NTFSPermissionsRecursively {
                             }
 
                             if ($boolFoundGroup -eq $false) {
-                                if ([string]::IsNullOrEmpty($strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                                     # Check the additional administrator account/group
-                                    if ($objThisACE.IdentityReference.Value -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                                    if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
                                         $boolFoundGroup = $true
                                         if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                             $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
@@ -6879,27 +7026,27 @@ function Repair-NTFSPermissionsRecursively {
                         }
                     }
 
-                    if ($null -eq $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl) {
+                    if ($null -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
                         $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
                     }
-                    if ($null -eq $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl) {
+                    if ($null -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
                         $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
                     }
 
                     if ($boolBuiltInAdministratorsDenyEntryFound) {
-                        Write-Warning ('The built-in Administrators group ("' + $strNameOfBuiltInAdministratorsGroupAccordingToGetAcl + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        Write-Warning ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                         $boolBuiltInAdministratorsHaveSufficientAccess = $false
                     }
                     if ($boolSYSTEMAccountDenyEntryFound) {
-                        Write-Warning ('The SYSTEM account ("' + $strNameOfSYSTEMAccountGroupAccordingToGetAcl + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        Write-Warning ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                         $boolSYSTEMAccountHasSufficientAccess = $false
                     }
                     if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                        Write-Warning ('The account "' + $strNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        Write-Warning ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                         $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
                     }
                     if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                        Write-Warning ('The account "' + $strNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        Write-Warning ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
                         $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
                     }
 
@@ -6916,7 +7063,7 @@ function Repair-NTFSPermissionsRecursively {
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
                             # Restart process without recursion flag, repair phase 1
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion -IterativeRepairState 1
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IterativeRepairState 1
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -6929,11 +7076,11 @@ function Repair-NTFSPermissionsRecursively {
                             # Try taking ownership of the folder/file with Set-Acl
 
                             # Take ownership
-                            $objThisFolderPermission.SetOwner([System.Security.Principal.NTAccount]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls)
+                            $objThisFolderPermission.SetOwner([System.Security.Principal.NTAccount]($NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls))
                             # TODO: Create Set-ACLSafely function to suppress errors
                             Set-Acl -Path $WorkingPath -AclObject $objThisFolderPermission
                             # Restart process without recursion flag, phase 2
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion -IterativeRepairState 2
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IterativeRepairState 2
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -7166,7 +7313,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                     $intReturnCode = -1
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -7248,7 +7395,7 @@ function Repair-NTFSPermissionsRecursively {
                                         Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                         $intReturnCode = -2
                                     } else {
-                                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                     }
 
                                     if ($intReturnCode -lt 0) {
@@ -7311,7 +7458,7 @@ function Repair-NTFSPermissionsRecursively {
                             # yet, so try again with temporary path length
                             # ignoring mode enabled
                             Write-Verbose ('The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -IgnorePathLengthLimits
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                             $intFunctionReturn = $intReturnCode
                             return $intFunctionReturn
                         } else {
@@ -7323,7 +7470,7 @@ function Repair-NTFSPermissionsRecursively {
                                 # yet, so try again with temporary path length
                                 # ignoring mode enabled
                                 Write-Verbose ('The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.')
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -IgnorePathLengthLimits
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                                 $intFunctionReturn = $intReturnCode
                                 return $intFunctionReturn
                             } else {
@@ -7356,9 +7503,9 @@ function Repair-NTFSPermissionsRecursively {
                                     } else {
                                         if ($boolIgnorePathLengthLimits) {
                                             # Run with ignoring path length limits
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -IgnorePathLengthLimits
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                                         } else {
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                         }
                                     }
 
@@ -7441,7 +7588,7 @@ function Repair-NTFSPermissionsRecursively {
                                             Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                             $intReturnCode = -2
                                         } else {
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                         }
 
                                         if ($intReturnCode -lt 0) {
@@ -7489,9 +7636,9 @@ function Repair-NTFSPermissionsRecursively {
                             # Process the file
                             # Pass-through temporary path length ignoring mode
                             if ($boolIgnorePathLengthLimits) {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion -IgnorePathLengthLimits
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -RunWithoutRecursion
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion
                             }
                             if ($intReturnCode -ne 0) {
                                 Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
@@ -7503,7 +7650,7 @@ function Repair-NTFSPermissionsRecursively {
                         $arrChildObjects | Where-Object { $_.PSIsContainer -eq $true } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
                             # Recursively process the child directory
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                             if ($intReturnCode -ne 0) {
                                 Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
                                 $intFunctionReturn = $intReturnCode
@@ -7516,6 +7663,27 @@ function Repair-NTFSPermissionsRecursively {
     }
     return $intFunctionReturn
 }
+
+#region Process Input ##############################################################
+if ([string]::IsNullOrEmpty($PathToFix)) {
+    Write-Warning 'The PathToFix parameter is required.'
+    return
+}
+
+if ($null -eq $RemoveUnresolvedSIDs) {
+    $boolRemoveUnresolvedSIDs = $false
+} else {
+    if ($RemoveUnresolvedSIDs.IsPresent -eq $false) {
+        $boolRemoveUnresolvedSIDs = $false
+    } else {
+        $boolRemoveUnresolvedSIDs = $true
+    }
+}
+$strPathToCSVContainingKnownSIDs = $PathToCSVContainingKnownSIDs
+#endregion Process Input ##############################################################
+
+# TODO: additional code/logic is necessary for adding a read-only account, see TODO
+# markers in Repair-NTFSPermissionsRecursively
 
 $hashtableKnownSIDs = $null
 if ($boolRemoveUnresolvedSIDs -eq $true) {
@@ -7570,9 +7738,9 @@ if ($boolRemoveUnresolvedSIDs -eq $true) {
 }
 
 $boolGetPSDriveWorkaroundIsKnownToBeUseful = $false
-$intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strPathToFix -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful ([ref]$boolGetPSDriveWorkaroundIsKnownToBeUseful) -ReferenceToHashtableOfKnownSIDs ([ref]$hashtableKnownSIDs)
+$intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $PathToFix -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful ([ref]$boolGetPSDriveWorkaroundIsKnownToBeUseful) -ReferenceToHashtableOfKnownSIDs ([ref]$hashtableKnownSIDs) -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls [ref]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl [ref]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls [ref]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl [ref]$NameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls [ref]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl [ref]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls [ref]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl [ref]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
 if ($intReturnCode -eq 0) {
-    Write-Host ('Successfully processed path: ' + $strPathToFix)
+    Write-Host ('Successfully processed path: ' + $PathToFix)
 } else {
-    Write-Error ('There were one or more issues processing the path "' + $strPathToFix + '" One error code returned was: ' + $intReturnCode)
+    Write-Error ('There were one or more issues processing the path "' + $PathToFix + '" One error code returned was: ' + $intReturnCode)
 }
