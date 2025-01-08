@@ -8227,8 +8227,7 @@ function Repair-NTFSPermissionsRecursively {
             #endregion Looping through each ACE in the ACL ############################
         }
 
-        # TODO: Add an -or clause to this for when the recursion depth is 0
-        if (-not $boolPermissionsInherited) {
+        if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
             #region No permissions are inherited ###################################
             # TODO: Take action here
             #endregion No permissions are inherited ###################################
