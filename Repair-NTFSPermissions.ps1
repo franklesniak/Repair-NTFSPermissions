@@ -6205,7 +6205,7 @@ function Repair-NTFSPermissionsRecursively {
     #region Process Input ##########################################################
     if ([string]::IsNullOrEmpty($WorkingPath)) {
         Write-Warning 'An empty working path was passed to Repair-NTFSPermissionsRecursively; this parameter is required, so the function is terminating.'
-        return -1
+        return -100
     }
 
     if ($null -eq $ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value) {
@@ -6303,15 +6303,27 @@ function Repair-NTFSPermissionsRecursively {
 
     # TODO: Add real path info here
     if ($null -eq $ReferenceToHashtableOfKnownSIDs) {
-        $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+        if ($WorkingPath -ne $refToRealPath.Value) {
+            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+        } else {
+            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+        }
     } else {
         if ($null -eq $ReferenceToHashtableOfKnownSIDs.Value) {
-            $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+            } else {
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed)'
+            }
         } else {
-            $strVerboseMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed)'
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed)'
+            } else {
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed)'
+            }
         }
     }
-    Write-Verbose $strVerboseMessage
+    Write-Verbose -Message $strMessage
 
     # $IterativeRepairState:
     # 0 = Allow recursion (default)
@@ -6331,10 +6343,20 @@ function Repair-NTFSPermissionsRecursively {
     # (shorter) length limit
     if ($WorkingPath.Length -ge $FOLDERPATHLIMIT -and $boolIgnorePathLengthLimits -ne $true) {
         #region Path Length Exceeds Limit ##########################################
-        Write-Verbose ($WorkingPath + ' is too long.')
+        if ($WorkingPath -ne $refToRealPath.Value) {
+            $strMessage = $WorkingPath + ' (real path: "' + $refToRealPath.Value + '") is too long.'
+        } else {
+            $strMessage = $WorkingPath + ' is too long.'
+        }
+        Write-Verbose -Message $strMessage
         if ($IterativeRepairState -ge 1) {
             #region In Iterative Repair State; No Recursion Allowed ################
-            Write-Error ('Despite attempts to mitigate, the path length of ' + $WorkingPath + ' exceeds the maximum length of ' + $FOLDERPATHLIMIT + ' characters.')
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Despite attempts to mitigate, the path length of ' + $WorkingPath + ' (real path "' + $refToRealPath.Value + '") exceeds the maximum length of ' + $FOLDERPATHLIMIT + ' characters.'
+            } else {
+                $strMessage = 'Despite attempts to mitigate, the path length of ' + $WorkingPath + ' exceeds the maximum length of ' + $FOLDERPATHLIMIT + ' characters.'
+            }
+            Write-Error -Message $strMessage
             $intFunctionReturn = -1
             return $intFunctionReturn
             #endregion In Iterative Repair State; No Recursion Allowed ################
@@ -6384,7 +6406,12 @@ function Repair-NTFSPermissionsRecursively {
                     # We are not in temporary path length ignoring mode yet, so try
                     # again with temporary path length ignoring mode enabled and
                     # recursion turned off
-                    Write-Verbose ('The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'The path length of item "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
+                    } else {
+                        $strMessage = 'The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
+                    }
+                    Write-Verbose -Message $strMessage
                     # Rerun without recursion and with path length ignoring mode enabled
                     $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                     $intFunctionReturn = $intReturnCode
@@ -6400,7 +6427,12 @@ function Repair-NTFSPermissionsRecursively {
                         # We are not in temporary path length ignoring mode yet, so try
                         # again with temporary path length ignoring mode enabled and
                         # recursion turned off
-                        Write-Verbose ('The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The path length of item "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.'
+                        } else {
+                            $strMessage = 'The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.'
+                        }
+                        Write-Verbose -Message $strMessage
                         # Rerun without recursion and with path length ignoring mode enabled
                         $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                         $intFunctionReturn = $intReturnCode
@@ -6426,7 +6458,7 @@ function Repair-NTFSPermissionsRecursively {
                             $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
                             $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
-                            Write-Verbose ('About to run command: ' + $strCommand)
+                            Write-Verbose -Message ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
 
                             # Confirm the path is ready
@@ -6435,7 +6467,12 @@ function Repair-NTFSPermissionsRecursively {
 
                             if ($boolPathAvailable -eq $false) {
                                 #region The drive substitution seems to have failed
-                                Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                } else {
+                                    $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                }
+                                Write-Verbose -Message $strMessage
                                 $intReturnCode = -1
                                 #endregion The drive substitution seems to have failed
                             } else {
@@ -6445,7 +6482,7 @@ function Repair-NTFSPermissionsRecursively {
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                            Write-Verbose ('About to run command: ' + $strCommand)
+                            Write-Verbose -Message ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
 
                             # TODO: This is not necessary, right? Because Wait-PathToBeNotReady will run Get-PSDrive
@@ -6457,7 +6494,12 @@ function Repair-NTFSPermissionsRecursively {
                             $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                             if ($boolPathUnavailable -eq $false) {
-                                Write-Warning ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                } else {
+                                    $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                }
+                                Write-Warning -Message $strMessage
                             }
 
                             if ($intReturnCode -eq 0) {
@@ -6513,7 +6555,7 @@ function Repair-NTFSPermissionsRecursively {
                                 if ($versionPS -ge ([version]'5.0')) {
                                     #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                     # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                    Write-Verbose -Message ('An error occurred when mitigating path length using drive substitution (real path: "' + $refToRealPath.Value + '"). Trying to create a symbolic link instead via PowerShell:' + " `n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + " `n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
                                     # TODO: Test this with a path containing a dollar sign ($)
                                     New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
                                     #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
@@ -6523,7 +6565,7 @@ function Repair-NTFSPermissionsRecursively {
                                     # TODO: Test this with a path containing a dollar sign ($)
                                     $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
-                                    Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                    Write-Verbose -Message ('An error occurred when mitigating path length using drive substitution (real path: "' + $refToRealPath.Value + '"). Trying to create a symbolic link instead via command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
                                     #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                 }
@@ -6533,7 +6575,12 @@ function Repair-NTFSPermissionsRecursively {
                                 $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                 if ($boolPathAvailable -eq $false) {
-                                    Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" (real path: "' + $refToRealPath.Value + '") because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                    } else {
+                                        $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                    }
+                                    Write-Error -Message $strMessage
                                     $intReturnCode = -2
                                 } else {
                                     $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
@@ -6548,7 +6595,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
 
                                 # Remove Symbolic Link
-                                Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                Write-Verbose -Message ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
                                 # TODO: Build error handling for this deletion:
                                 (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
 
@@ -6561,7 +6608,12 @@ function Repair-NTFSPermissionsRecursively {
                                 $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                 if ($boolPathUnavailable -eq $false) {
-                                    Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                    } else {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                    }
+                                    Write-Warning -Message $strMessage
                                 }
                                 #endregion We found a suitable symbolic link target ###
                             }
@@ -6571,7 +6623,12 @@ function Repair-NTFSPermissionsRecursively {
 
                         if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
                             #region Both drive substitution and symbolic link failed
-                            Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
+                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '")'
+                            } else {
+                                $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath
+                            }
+                            Write-Error -Message $strMessage
                             $intFunctionReturn = -3
                             return $intFunctionReturn
                             #endregion Both drive substitution and symbolic link failed
@@ -6583,13 +6640,23 @@ function Repair-NTFSPermissionsRecursively {
                 #endregion We found a parent folder that is within the path length limit
             } elseif ($boolPossibleAttemptsExceeded -eq $true) {
                 #region No parent folder that is within the path length limit was found
-                Write-Error ('Cannot process the following path because it contains no parent folder element that is of an acceptable length with which to perform drive substitution or creation of a symbolic link: ' + $WorkingPath)
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Cannot process the following path because it contains no parent folder element that is of an acceptable length with which to perform drive substitution or creation of a symbolic link: ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '")'
+                } else {
+                    $strMessage = 'Cannot process the following path because it contains no parent folder element that is of an acceptable length with which to perform drive substitution or creation of a symbolic link: ' + $WorkingPath
+                }
+                Write-Error -Message $strMessage
                 $intFunctionReturn = -4
                 return $intFunctionReturn
                 #endregion No parent folder that is within the path length limit was found
             } else {
                 #region Unexpected Error ###########################################
-                Write-Error ('While working on the path "' + $WorkingPath + '", the path was too long, and an acceptable parent folder element with which path substitution should be performed could not be found. This is unexpected.')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'While working on the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"), the path was too long, and an acceptable parent folder element with which path substitution should be performed could not be found. This is unexpected.'
+                } else {
+                    $strMessage = 'While working on the path "' + $WorkingPath + '", the path was too long, and an acceptable parent folder element with which path substitution should be performed could not be found. This is unexpected.'
+                }
+                Write-Error -Message $strMessage
                 $intFunctionReturn = -10
                 return $intFunctionReturn
                 #endregion Unexpected Error ###########################################
@@ -6623,7 +6690,12 @@ function Repair-NTFSPermissionsRecursively {
                     #region We're already running using a DOS 8.3 path, and it didn't work
                     # We already tried a DOS 8.3 path, and it didn't work; nothing else
                     # we can do
-                    Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...'
+                    } else {
+                        $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...'
+                    }
+                    Write-Verbose -Message $strMessage
                     $intFunctionReturn = -5
                     return $intFunctionReturn
                     #endregion We're already running using a DOS 8.3 path, and it didn't work
@@ -6635,13 +6707,23 @@ function Repair-NTFSPermissionsRecursively {
                     $boolSuccess = Get-DOS83Path -ReferenceToDOS8Dot3Path ([ref]$strDOS83Path) -Path $WorkingPath
                     if ($boolSuccess -eq $false) {
                         #region Unable to get DOS 8.3 path #########################
-                        Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.'
+                        } else {
+                            $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.'
+                        }
+                        Write-Verbose -Message $strMessage
                         $intFunctionReturn = -13
                         return $intFunctionReturn
                         #endregion Unable to get DOS 8.3 path #########################
                     } else {
                         #region We got the DOS 8.3 path ############################
-                        Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path)
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path
+                        } else {
+                            $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path
+                        }
+                        Write-Verbose -Message $strMessage
                         if ($boolIgnorePathLengthLimits) {
                             # Run in DOS 8.3 path mode and ignore path length limits
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -DOS8dot3PathBeingUsed -IgnorePathLengthLimits
@@ -6701,7 +6783,12 @@ function Repair-NTFSPermissionsRecursively {
                 if ($boolSuccess -eq $false) {
                     #region We had success reading permissions before, but now that we took ownership, we suddenly cannot read them
                     # This is a critical error.
-                    Write-Error ('After taking ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, the script is unable to read permissions from the folder/file using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand)
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'After taking ownership of the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") on behalf of administrators, the script is unable to read permissions from the folder/file using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand
+                    } else {
+                        $strMessage = 'After taking ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, the script is unable to read permissions from the folder/file using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand
+                    }
+                    Write-Error -Message $strMessage
                     $intFunctionReturn = -6
                     $boolCriticalErrorOccurred = $true
                     return $intFunctionReturn
@@ -6710,7 +6797,12 @@ function Repair-NTFSPermissionsRecursively {
                     #region The script was able to read permissions after taking ownership
                     if ($null -eq $objThisFolderPermission) {
                         #region An error did not occur retrieving permissions the second time; however no permissions were retrieved
-                        Write-Warning ('The script was able read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, even after taking ownership. It''s possibe this is becasue the ACL is blank/empty on the object, but that is unusual.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The script was able read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, even after taking ownership. It''s possibe this is because the ACL is blank/empty on the object, but that is unusual.'
+                        } else {
+                            $strMessage = 'The script was able read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, even after taking ownership. It''s possibe this is because the ACL is blank/empty on the object, but that is unusual.'
+                        }
+                        Write-Warning -Message $strMessage
                         #endregion An error did not occur retrieving permissions the second time; however no permissions were retrieved
                     }
                     #endregion The script was able to read permissions after taking ownership
@@ -6875,25 +6967,50 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolBuiltInAdministratorsDenyEntryFound) {
-                Write-Warning ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                } else {
+                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                }
+                Write-Warning -Message $strMessage
                 $boolBuiltInAdministratorsHaveSufficientAccess = $false
             }
             if ($boolSYSTEMAccountDenyEntryFound) {
-                Write-Warning ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                } else {
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                }
+                Write-Warning -Message $strMessage
                 $boolSYSTEMAccountHasSufficientAccess = $false
             }
             if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                Write-Warning ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                } else {
+                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                }
+                Write-Warning -Message $strMessage
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
             }
             if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                Write-Warning ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                } else {
+                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                }
+                Write-Warning -Message $strMessage
                 $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
             }
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
                 $boolPermissionAdjustmentNecessary = $true
-                Write-Verbose ('Permission adjustment necessary for "' + $WorkingPath + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Permission adjustment necessary for "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Permission adjustment necessary for "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
             } else {
                 $boolPermissionAdjustmentNecessary = $false
             }
@@ -6902,7 +7019,12 @@ function Repair-NTFSPermissionsRecursively {
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false) {
                 #region Built-In Administrators group does not have sufficient access
-                Write-Verbose ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for administrators
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -6925,7 +7047,12 @@ function Repair-NTFSPermissionsRecursively {
 
             if ($boolSYSTEMAccountHasSufficientAccess -eq $false) {
                 #region SYSTEM account does not have sufficient access #############
-                Write-Verbose ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for SYSTEM
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -6947,7 +7074,12 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false) {
-                Write-Verbose ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional administrator
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -6967,7 +7099,12 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
-                Write-Verbose ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder "' + $WorkingPath + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for additional read only account
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -6996,7 +7133,12 @@ function Repair-NTFSPermissionsRecursively {
                     # We had success reading permissions before, but now that we
                     # granted accounts permission, we suddenly cannot read them. This
                     # is a critical error.
-                    Write-Error ('After granting permissions to the folder/file "' + $WorkingPath + '", the script is unable to read permissions from the folder/file using Get-Acl. The command(s) used to grant permissions were:' + "`n`n" + $strAllCommandsInThisSection)
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'After granting permissions to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"), the script is unable to read permissions from the folder/file using Get-Acl. The command(s) used to grant permissions were:' + "`n`n" + $strAllCommandsInThisSection
+                    } else {
+                        $strMessage = 'After granting permissions to the folder/file "' + $WorkingPath + '", the script is unable to read permissions from the folder/file using Get-Acl. The command(s) used to grant permissions were:' + "`n`n" + $strAllCommandsInThisSection
+                    }
+                    Write-Error -Message $strMessage
                     $intFunctionReturn = -7
                     $boolCriticalErrorOccurred = $true
                     return $intFunctionReturn
@@ -7134,25 +7276,50 @@ function Repair-NTFSPermissionsRecursively {
                     }
 
                     if ($boolBuiltInAdministratorsDenyEntryFound) {
-                        Write-Warning ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                        } else {
+                            $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                        }
+                        Write-Warning -Message $strMessage
                         $boolBuiltInAdministratorsHaveSufficientAccess = $false
                     }
                     if ($boolSYSTEMAccountDenyEntryFound) {
-                        Write-Warning ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                        } else {
+                            $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                        }
+                        Write-Warning -Message $strMessage
                         $boolSYSTEMAccountHasSufficientAccess = $false
                     }
                     if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                        Write-Warning ('The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                        } else {
+                            $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                        }
+                        Write-Warning $strMessage
                         $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
                     }
                     if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                        Write-Warning ('The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
+                        } else {
+                            $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
+                        }
+                        Write-Warning -Message $strMessage
                         $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
                     }
 
                     if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
                         #region Permissions adjustments were attempted; however, they are still not correct
-                        Write-Verbose ('Despite attempting to apply permissions to the folder/file, the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Despite attempting to apply permissions to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"), the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.'
+                        } else {
+                            $strMessage = 'Despite attempting to apply permissions to the folder/file "' + $WorkingPath + '", the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.'
+                        }
+                        Write-Verbose -Message $strMessage
                         # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                         if ($IterativeRepairState -eq 0) {
                             #region We are running normally (not in an iterative repair state), so we can try taking ownership of the folder/file
@@ -7201,7 +7368,12 @@ function Repair-NTFSPermissionsRecursively {
                             #endregion We are in repair phase 1, so we can try taking ownership of the folder/file with Set-Acl instead of takeown.exe
                         } else {
                             #region We are in repair phase 2, so we have already tried taking ownership using takeown.exe and Set-Acl; however, we still cannot add the required permissions to the object
-                            Write-Warning ('The permissions on the folder "' + $WorkingPath + '" could not be repaired. Please repair them manually.')
+                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                $strMessage = 'The permissions on the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") could not be repaired. Please repair them manually.'
+                            } else {
+                                $strMessage = 'The permissions on the folder/file "' + $WorkingPath + '" could not be repaired. Please repair them manually.'
+                            }
+                            Write-Warning -Message $strMessage
                             #endregion We are in repair phase 2, so we have already tried taking ownership using takeown.exe and Set-Acl; however, we still cannot add the required permissions to the object
                         }
                         #endregion Permissions adjustments were attempted; however, they are still not correct
@@ -7229,7 +7401,12 @@ function Repair-NTFSPermissionsRecursively {
 
                     if ($WorkingPath -eq $LastShortenedPath) {
                         #region The path is already as short as it can be, so there is nothing further for this script to try
-                        Write-Error ('Unable to enumerate child objects in path "' + $WorkingPath + '". This can occur if path length is too long. However, its path length has already been shortened, so there is nothing further for this script to try. Please repair the permissions on this folder manually.')
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Unable to enumerate child objects in path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). This can occur if path length is too long. However, its path length has already been shortened, so there is nothing further for this script to try. Please repair the permissions on this folder manually.'
+                        } else {
+                            $strMessage = 'Unable to enumerate child objects in path "' + $WorkingPath + '". This can occur if path length is too long. However, its path length has already been shortened, so there is nothing further for this script to try. Please repair the permissions on this folder manually.'
+                        }
+                        Write-Error -Message $strMessage
                         $intFunctionReturn = -8
                         return $intFunctionReturn
                         #endregion The path is already as short as it can be, so there is nothing further for this script to try
@@ -7238,7 +7415,12 @@ function Repair-NTFSPermissionsRecursively {
                         if ($WorkingPath.Length -le 3) {
                             # The path is already as short as it can be, so there is
                             # nothing further for this script to try
-                            Write-Error ('Unable to enumerate child objects in path "' + $WorkingPath + '". This can occur if path length is too long. However, in this case, its path length is already as short as possible, so there is nothing further for this script to try. Please investigate and then repair the permissions on this folder manually.')
+                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                $strMessage = 'Unable to enumerate child objects in path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). This can occur if path length is too long. However, in this case, its path length is already as short as possible, so there is nothing further for this script to try. Please investigate and then repair the permissions on this folder manually.'
+                            } else {
+                                $strMessage = 'Unable to enumerate child objects in path "' + $WorkingPath + '". This can occur if path length is too long. However, in this case, its path length is already as short as possible, so there is nothing further for this script to try. Please investigate and then repair the permissions on this folder manually.'
+                            }
+                            Write-Error -Message $strMessage
                             $intFunctionReturn = -12
                             return $intFunctionReturn
                         } else {
@@ -7268,7 +7450,12 @@ function Repair-NTFSPermissionsRecursively {
 
                                 if ($boolPathAvailable -eq $false) {
                                     #region The drive substitution seems to have failed
-                                    Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                    } else {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                    }
+                                    Write-Verbose -Message $strMessage
                                     $intReturnCode = -1
                                     #endregion The drive substitution seems to have failed
                                 } else {
@@ -7290,7 +7477,12 @@ function Repair-NTFSPermissionsRecursively {
                                 $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                 if ($boolPathUnavailable -eq $false) {
-                                    Write-Warning ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                    } else {
+                                        $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                    }
+                                    Write-Warning -Message $strMessage
                                 }
 
                                 if ($intReturnCode -eq 0) {
@@ -7346,7 +7538,8 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($versionPS -ge ([version]'5.0')) {
                                         #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                         # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                        $strMessage = 'An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$')
+                                        Write-Verbose -Message $strMessage
                                         # TODO: Test this with a path containing a dollar sign ($)
                                         New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
                                         #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
@@ -7356,7 +7549,8 @@ function Repair-NTFSPermissionsRecursively {
                                         # TODO: Test this with a path containing a dollar sign ($)
                                         $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                         $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
-                                        Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                        $strMessage = 'An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand
+                                        Write-Verbose -Message $strMessage
                                         $null = Invoke-Expression $strCommand
                                         #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                     }
@@ -7366,7 +7560,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                     if ($boolErrorOccurredUsingNewPath -eq $true) {
-                                        Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" (real path: "' + $refToRealPath.Value + '") because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                        } else {
+                                            $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                        }
+                                        Write-Error -Message $strMessage
                                         $intReturnCode = -2
                                     } else {
                                         $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
@@ -7394,7 +7593,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                     if ($boolPathUnavailable -eq $false) {
-                                        Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                        } else {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                        }
+                                        Write-Warning -Message $strMessage
                                     }
                                     #endregion We found a suitable symbolic link target
                                 }
@@ -7404,7 +7608,12 @@ function Repair-NTFSPermissionsRecursively {
 
                             if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
                                 #region Both drive substitution and symbolic link failed
-                                Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '")'
+                                } else {
+                                    $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath
+                                }
+                                Write-Error -Message $strMessage
                                 $intFunctionReturn = -9
                                 return $intFunctionReturn
                                 #endregion Both drive substitution and symbolic link failed
@@ -7434,7 +7643,12 @@ function Repair-NTFSPermissionsRecursively {
 
                         if ($WorkingPath -eq $LastShortenedPath) {
                             #region Try again with IgnorePathLengthLimits enabled ##
-                            Write-Verbose ('The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
+                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
+                            } else {
+                                $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
+                            }
+                            Write-Verbose -Message $strMessage
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                             $intFunctionReturn = $intReturnCode
                             return $intFunctionReturn
@@ -7449,7 +7663,12 @@ function Repair-NTFSPermissionsRecursively {
                                 # We are not in temporary path length ignoring mode
                                 # yet, so try again with temporary path length
                                 # ignoring mode enabled
-                                Write-Verbose ('The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.'
+                                } else {
+                                    $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.'
+                                }
+                                Write-Verbose -Message $strMessage
                                 $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                                 $intFunctionReturn = $intReturnCode
                                 return $intFunctionReturn
@@ -7482,7 +7701,12 @@ function Repair-NTFSPermissionsRecursively {
 
                                     if ($boolPathAvailable -eq $false) {
                                         #region The drive substitution seems to have failed
-                                        Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                        } else {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
+                                        }
+                                        Write-Verbose -Message $strMessage
                                         $intReturnCode = -1
                                         #endregion The drive substitution seems to have failed
                                     } else {
@@ -7509,7 +7733,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolPathUnavailable = Wait-PathToBeNotReady -Path ($strDriveLetterToUse + ':') -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                     if ($boolPathUnavailable -eq $false) {
-                                        Write-Warning ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand)
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                        } else {
+                                            $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
+                                        }
+                                        Write-Warning -Message $strMessage
                                     }
 
                                     if ($intReturnCode -eq 0) {
@@ -7565,7 +7794,8 @@ function Repair-NTFSPermissionsRecursively {
                                         if ($versionPS -ge ([version]'5.0')) {
                                             #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                             # PowerShell 5.0 and newer can make symbolic links in PowerShell
-                                            Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
+                                            $strMessage = 'An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$')
+                                            Write-Verbose -Message $strMessage
                                             # TODO: Test this with a path containing a dollar sign ($)
                                             New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
                                             #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
@@ -7585,7 +7815,12 @@ function Repair-NTFSPermissionsRecursively {
                                         $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                         if ($boolErrorOccurredUsingNewPath -eq $true) {
-                                            Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" (real path: "' + $refToRealPath.Value + '") because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                            } else {
+                                                $strMessage = 'Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.'
+                                            }
+                                            Write-Error -Message $strMessage
                                             $intReturnCode = -2
                                         } else {
                                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
@@ -7613,7 +7848,12 @@ function Repair-NTFSPermissionsRecursively {
                                         $boolPathUnavailable = Wait-PathToBeNotReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                         if ($boolPathUnavailable -eq $false) {
-                                            Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                            } else {
+                                                $strMessage = 'There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.'
+                                            }
+                                            Write-Warning -Message $strMessage
                                         }
                                         #endregion We found a suitable symbolic link target
                                     }
@@ -7623,7 +7863,12 @@ function Repair-NTFSPermissionsRecursively {
 
                                 if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
                                     #region Both drive substitution and symbolic link failed
-                                    Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '")'
+                                    } else {
+                                        $strMessage = 'Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath
+                                    }
+                                    Write-Error -Message $strMessage
                                     $intFunctionReturn = -11
                                     return $intFunctionReturn
                                     #endregion Both drive substitution and symbolic link failed
@@ -7640,14 +7885,24 @@ function Repair-NTFSPermissionsRecursively {
                         $arrChildObjects | Where-Object { $_.PSIsContainer -eq $false } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
                             # Process the file
+
+                            # Generate a new real path for the item and pass it to the
+                            # recursive function
+                            $strNewRealPath = Join-Path -Path ($refToRealPath.Value) -ChildPath $objDirectoryOrFileInfoChild.Name
+
                             # Pass-through temporary path length ignoring mode
                             if ($boolIgnorePathLengthLimits) {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion
                             }
                             if ($intReturnCode -ne 0) {
-                                Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                if ($objDirectoryOrFileInfoChild.FullName -ne $strNewRealPath) {
+                                    $strMessage = 'There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" (real path: "' + $strNewRealPath + '") The error code returned was: ' + $intReturnCode
+                                } else {
+                                    $strMessage = 'There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode
+                                }
+                                Write-Warning -Message $strMessage
                                 $intFunctionReturn = $intReturnCode
                             }
                         }
@@ -7657,9 +7912,19 @@ function Repair-NTFSPermissionsRecursively {
                         $arrChildObjects | Where-Object { $_.PSIsContainer -eq $true } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
                             # Recursively process the child directory
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+
+                            # Generate a new real path for the item and pass it to the
+                            # recursive function
+                            $strNewRealPath = Join-Path -Path ($refToRealPath.Value) -ChildPath $objDirectoryOrFileInfoChild.Name
+
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                             if ($intReturnCode -ne 0) {
-                                Write-Warning ('There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode)
+                                if ($objDirectoryOrFileInfoChild.FullName -ne $strNewRealPath) {
+                                    $strMessage = 'There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" (real path: "' + $strNewRealPath + '") The error code returned was: ' + $intReturnCode
+                                } else {
+                                    $strMessage = 'There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" The error code returned was: ' + $intReturnCode
+                                }
+                                Write-Warning -Message $strMessage
                                 $intFunctionReturn = $intReturnCode
                             }
                         }
@@ -7723,7 +7988,12 @@ function Repair-NTFSPermissionsRecursively {
             #region Looping through each ACE in the ACL ############################
             if (($arrWorkingACEs[$intCounterA]).IsInherited -eq $false) {
                 #region Current ACE is not inherited ###############################
-                Write-Verbose ('Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Found non-inherited ACE in path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
+                } else {
+                    $strMessage = 'Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
+                }
+                Write-Verbose -Message $strMessage
                 if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
                     #region ACE has an IdentityReference ###########################
                     if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
@@ -7731,13 +8001,28 @@ function Repair-NTFSPermissionsRecursively {
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
                             #region Function is set to remove unresolved SIDs ######
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                } else {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                }
+                                Write-Warning -Message $strMessage
                             } else {
                                 #region The SID is not a protected SID (meaning: it should be removed)
                                 if ($arrACETracking[$intCounterA] -eq $true) {
-                                    Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                    } else {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                    }
+                                    Write-Warning -Message $strMessage
                                 }
-                                Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                } else {
+                                    $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                }
+                                Write-Verbose -Message $strMessage
                                 $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                 if ($boolSuccess -eq $false) {
                                     #region Access rule removal failed #############
@@ -7771,13 +8056,28 @@ function Repair-NTFSPermissionsRecursively {
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
                             #region Function is set to remove unresolved SIDs ##
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                } else {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                }
+                                Write-Warning -Message $strMessage
                             } else {
                                 #region The SID is not a protected SID (meaning: it should be removed)
                                 if ($arrACETracking[$intCounterA] -eq $true) {
-                                    Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                    } else {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                    }
+                                    Write-Warning -Message $strMessage
                                 }
-                                Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                } else {
+                                    $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                }
+                                Write-Verbose -Message $strMessage
                                 $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
                                 $fileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
                                 $inheritanceFlags = ($arrWorkingACEs[$intCounterA]).InheritanceFlags
@@ -7835,10 +8135,20 @@ function Repair-NTFSPermissionsRecursively {
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
                             #region Function is set to remove unresolved SIDs ######
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                } else {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                }
+                                Write-Warning -Message $strMessage
                             } else {
                                 # Not a protected SID
-                                Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '"). However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
+                                } else {
+                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
+                                }
+                                Write-Warning -Message $strMessage
                             }
                             #endregion Function is set to remove unresolved SIDs ######
                         }
@@ -7848,12 +8158,22 @@ function Repair-NTFSPermissionsRecursively {
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
                             #region Function is set to remove unresolved SIDs ######
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                } else {
+                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                }
+                                Write-Warning -Message $strMessage
                             } else {
                                 #region The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
                                 # TODO: Display this warning only if the recursion
                                 # depth is 0
-                                Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '"). However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
+                                } else {
+                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
+                                }
+                                Write-Warning -Message $strMessage
                                 #endregion The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
                             }
                             #endregion Function is set to remove unresolved SIDs ######
@@ -7874,13 +8194,23 @@ function Repair-NTFSPermissionsRecursively {
 
         if ($boolACLChangeMade -eq $true) {
             #region At least once change was made to the ACL; we need to write it to disk
-            Write-Verbose ('Writing ACL changes to disk for path "' + $WorkingPath + '".')
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Writing ACL changes to disk for path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Writing ACL changes to disk for path "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
             $boolSuccess = Write-ACLToObject -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToTargetObject ([ref]$objThis) -ReferenceToACL ([ref]$objThisFolderPermission)
             if ($boolSuccess -eq $false) {
                 #region Write-ACLToObject failed ###################################
                 # TODO: Capture $_.Exception.Message from failure in Write-ACLToObject
                 # Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Error: ' + $_.Exception.Message + '; child folders and files will not be processed!')
-                Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Child folders and files will not be processed!')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Unable to write ACL changes to disk for path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Child folders and files will not be processed!'
+                } else {
+                    $strMessage = 'Unable to write ACL changes to disk for path "' + $WorkingPath + '". Child folders and files will not be processed!'
+                }
+                Write-Warning -Message $strMessage
                 intFunctionReturn = -14
                 return $intFunctionReturn
                 #endregion Write-ACLToObject failed ###################################
