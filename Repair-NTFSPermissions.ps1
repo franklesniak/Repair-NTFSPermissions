@@ -1068,16 +1068,16 @@ function Repair-NTFSPermissionsRecursively {
         # its processing.
         #
         # .EXAMPLE
-        # $objThisFolderPermission = $null
+        # $objThisObjectPermission = $null
         # $objThis = $null
         # $strThisObjectPath = 'D:\Shares\Share\Accounting'
-        # $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $strThisObjectPath
+        # $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $strThisObjectPath
         #
         # .EXAMPLE
-        # $objThisFolderPermission = $null
+        # $objThisObjectPermission = $null
         # $objThis = $null
         # $strThisObjectPath = 'D:\Shares\Share\Accounting'
-        # $boolSuccess = Get-AclSafely ([ref]$objThisFolderPermission) ([ref]$objThis) $strThisObjectPath
+        # $boolSuccess = Get-AclSafely ([ref]$objThisObjectPermission) ([ref]$objThis) $strThisObjectPath
         #
         # .INPUTS
         # None. You can't pipe objects to Get-AclSafely.
@@ -6336,7 +6336,7 @@ function Repair-NTFSPermissionsRecursively {
     $intFunctionReturn = 0
 
     $objThis = $null
-    $objThisFolderPermission = $null
+    $objThisObjectPermission = $null
     $versionPS = Get-PSVersion
 
     # We don't know if $WorkingPath is pointing to a folder or a file, so use the folder
@@ -6668,7 +6668,7 @@ function Repair-NTFSPermissionsRecursively {
         #region Path is not too long, or the function was called with "IgnorePathLengthLimits"
         $boolCriticalErrorOccurred = $false
 
-        $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
+        $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
         if ($boolSuccess -eq $false) {
             #region An error occurred reading the ACL ##############################
@@ -6682,7 +6682,7 @@ function Repair-NTFSPermissionsRecursively {
 
             # Should now be able to read permissions
 
-            $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
+            $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
             if ($boolSuccess -eq $false) {
                 #region Still unable to read permissions after running takeown.exe #
@@ -6758,14 +6758,14 @@ function Repair-NTFSPermissionsRecursively {
             #         # square bracket in a path passed to Get-Acl. But those paths
             #         # should have already thrown an error - so we stick with only
             #         # escaping a grave accent mark/backtick.
-            #         $objThisFolderPermission = Get-Acl -Path ($WorkingPath.Replace('`', '``'))
+            #         $objThisObjectPermission = Get-Acl -Path ($WorkingPath.Replace('`', '``'))
             #     } else {
             #         # No square brackets; use Get-Acl
-            #         $objThisFolderPermission = Get-Acl -Path $WorkingPath
+            #         $objThisObjectPermission = Get-Acl -Path $WorkingPath
             #     }
             # }
 
-            if ($null -eq $objThisFolderPermission) {
+            if ($null -eq $objThisObjectPermission) {
                 #region An error did not occur retrieving permissions; however no permissions were retrieved
                 # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
 
@@ -6778,7 +6778,7 @@ function Repair-NTFSPermissionsRecursively {
 
                 # Should now be able to read permissions
 
-                $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
+                $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
                 if ($boolSuccess -eq $false) {
                     #region We had success reading permissions before, but now that we took ownership, we suddenly cannot read them
@@ -6795,7 +6795,7 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion We had success reading permissions before, but now that we took ownership, we suddenly cannot read them
                 } else {
                     #region The script was able to read permissions after taking ownership
-                    if ($null -eq $objThisFolderPermission) {
+                    if ($null -eq $objThisObjectPermission) {
                         #region An error did not occur retrieving permissions the second time; however no permissions were retrieved
                         if ($WorkingPath -ne $refToRealPath.Value) {
                             $strMessage = 'The script was able read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, even after taking ownership. It''s possibe this is because the ACL is blank/empty on the object, but that is unusual.'
@@ -6839,13 +6839,26 @@ function Repair-NTFSPermissionsRecursively {
                 #endregion The System.IO.DirectoryInfo or System.IO.FileInfo object was null after retrieving the ACL
             }
 
-            if ($null -eq $objThisFolderPermission) {
+            if ($null -eq $objThisObjectPermission) {
                 #region The permissions object was null, indicating that the ACL was blank/empty
                 $arrACEs = @()
+                $boolPermissionsInherited = $false
                 #endregion The permissions object was null, indicating that the ACL was blank/empty
             } else {
                 #region The permissions object was not null
-                $arrACEs = @($objThisFolderPermission.Access)
+                $arrACEs = @($objThisObjectPermission.Access)
+                $boolPermissionsInherited = $objThisObjectPermission.AreAccessRulesProtected
+                if ($boolPermissionsInherited -ne $true -and $boolPermissionsInherited -ne $false) {
+                    #region The permissions inheritance status was not a boolean value
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
+                    } else {
+                        $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
+                    }
+                    Write-Warning -Message $strMessage
+                    $boolPermissionsInherited = $false
+                    #endregion The permissions inheritance status was not a boolean value
+                }
                 #endregion The permissions object was not null
             }
 
@@ -7126,7 +7139,7 @@ function Repair-NTFSPermissionsRecursively {
             if ($boolPermissionAdjustmentNecessary) {
                 #region Permissions adjustments were attempted; re-read permissions to verify they are now correct
 
-                $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
+                $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
                 if ($boolSuccess -eq $false) {
                     #region An error occurred reading permissions with Get-Acl after attempts were made to fix permissions
                     #
@@ -7154,10 +7167,23 @@ function Repair-NTFSPermissionsRecursively {
                     #     # Not sure why...
                     #     # So, we need to get the ACL directly and hope that we don't
                     #     # have an error this time
-                    #     $objThisFolderPermission = Get-Acl
+                    #     $objThisObjectPermission = Get-Acl
                     # }
 
-                    $arrACEs = @($objThisFolderPermission.Access)
+                    $arrACEs = @($objThisObjectPermission.Access)
+
+                    $boolPermissionsInherited = $objThisObjectPermission.AreAccessRulesProtected
+                    if ($boolPermissionsInherited -ne $true -and $boolPermissionsInherited -ne $false) {
+                        #region The permissions inheritance status was not a boolean value
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
+                        } else {
+                            $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
+                        }
+                        Write-Warning -Message $strMessage
+                        $boolPermissionsInherited = $false
+                        #endregion The permissions inheritance status was not a boolean value
+                    }
 
                     $boolBuiltInAdministratorsDenyEntryFound = $false
                     $boolBuiltInAdministratorsHaveSufficientAccess = $false
@@ -7349,9 +7375,9 @@ function Repair-NTFSPermissionsRecursively {
                             # Try taking ownership of the folder/file with Set-Acl
 
                             #region Take ownership using Set-Acl ###################
-                            $objThisFolderPermission.SetOwner([System.Security.Principal.NTAccount]($NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls))
+                            $objThisObjectPermission.SetOwner([System.Security.Principal.NTAccount]($NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls))
                             # TODO: Create Set-ACLSafely function to suppress errors
-                            Set-Acl -Path $WorkingPath -AclObject $objThisFolderPermission
+                            Set-Acl -Path $WorkingPath -AclObject $objThisObjectPermission
                             # Restart process without recursion flag, phase 2
                             #endregion Take ownership using Set-Acl ###################
 
@@ -8023,7 +8049,7 @@ function Repair-NTFSPermissionsRecursively {
                                     $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
                                 }
                                 Write-Verbose -Message $strMessage
-                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                 if ($boolSuccess -eq $false) {
                                     #region Access rule removal failed #############
                                     Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
@@ -8032,7 +8058,7 @@ function Repair-NTFSPermissionsRecursively {
                                     #region Access rule removal was successful #####
                                     $arrACETracking[$intCounterA] = $true
                                     # Test to see if permissions were removed by comparing the ACE count
-                                    $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                     if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                         #region Permissions confirmed removed based on change in ACE count
                                         Write-Verbose ('...the unresolved SID was removed...')
@@ -8084,7 +8110,7 @@ function Repair-NTFSPermissionsRecursively {
                                 $propagationFlags = ($arrWorkingACEs[$intCounterA]).PropagationFlags
                                 $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
                                 $fileSystemAccessRuleOld = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
-                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
                                 if ($boolSuccess -eq $false) {
                                     #region Access rule removal failed #########
                                     Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
@@ -8093,7 +8119,7 @@ function Repair-NTFSPermissionsRecursively {
                                     #region Access rule removal was successful #
                                     $arrACETracking[$intCounterA] = $true
                                     # Test to see if permissions were removed by comparing the ACE count
-                                    $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                     if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                         #region Permissions confirmed removed based on change in ACE count
                                         Write-Verbose ('...the unresolved SID was removed...')
@@ -8192,6 +8218,12 @@ function Repair-NTFSPermissionsRecursively {
             #endregion Looping through each ACE in the ACL ############################
         }
 
+        if ($boolPermissionsInherited) {
+            #region At least some permissions are inherited ########################
+            # TODO: Take action here
+            #endregion At least some permissions are inherited ########################
+        }
+
         if ($boolACLChangeMade -eq $true) {
             #region At least once change was made to the ACL; we need to write it to disk
             if ($WorkingPath -ne $refToRealPath.Value) {
@@ -8200,7 +8232,7 @@ function Repair-NTFSPermissionsRecursively {
                 $strMessage = 'Writing ACL changes to disk for path "' + $WorkingPath + '".'
             }
             Write-Verbose -Message $strMessage
-            $boolSuccess = Write-ACLToObject -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToTargetObject ([ref]$objThis) -ReferenceToACL ([ref]$objThisFolderPermission)
+            $boolSuccess = Write-ACLToObject -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToTargetObject ([ref]$objThis) -ReferenceToACL ([ref]$objThisObjectPermission)
             if ($boolSuccess -eq $false) {
                 #region Write-ACLToObject failed ###################################
                 # TODO: Capture $_.Exception.Message from failure in Write-ACLToObject
