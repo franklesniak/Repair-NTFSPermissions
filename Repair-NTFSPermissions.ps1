@@ -6330,12 +6330,16 @@ function Repair-NTFSPermissionsRecursively {
     # We don't know if $WorkingPath is pointing to a folder or a file, so use the folder
     # (shorter) length limit
     if ($WorkingPath.Length -ge $FOLDERPATHLIMIT -and $boolIgnorePathLengthLimits -ne $true) {
+        #region Path Length Exceeds Limit ##########################################
         Write-Verbose ($WorkingPath + ' is too long.')
         if ($IterativeRepairState -ge 1) {
+            #region In Iterative Repair State; No Recursion Allowed ################
             Write-Error ('Despite attempts to mitigate, the path length of ' + $WorkingPath + ' exceeds the maximum length of ' + $FOLDERPATHLIMIT + ' characters.')
             $intFunctionReturn = -1
             return $intFunctionReturn
+            #endregion In Iterative Repair State; No Recursion Allowed ################
         } else {
+            #region Running Normally (Not In Iterative Repair State); Recursion Allowed
             $intAttemptNumber = 0
             $boolPossibleAttemptsExceeded = $false
             $boolTenablePathFound = $false
@@ -6372,7 +6376,9 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolTenablePathFound) {
+                #region We found a parent folder that is within the path length limit
                 if ($strParentFolder -eq $LastShortenedPath) {
+                    #region The parent folder that is under the length limit is the same as the last shortened path
                     # Don't attempt another substitution since we already did that
                     #
                     # We are not in temporary path length ignoring mode yet, so try
@@ -6383,8 +6389,11 @@ function Repair-NTFSPermissionsRecursively {
                     $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                     $intFunctionReturn = $intReturnCode
                     return $intFunctionReturn
+                    #endregion The parent folder that is under the length limit is the same as the last shortened path
                 } else {
+                    #region The parent folder that is under the length limit is different than the last shortened path (this is good)
                     if ($strParentFolder.Length -le 3) {
+                        #region The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
                         # We are already working with the shortest possible path; no
                         # need to try a substitution
                         #
@@ -6396,7 +6405,9 @@ function Repair-NTFSPermissionsRecursively {
                         $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IgnorePathLengthLimits
                         $intFunctionReturn = $intReturnCode
                         return $intFunctionReturn
+                        #endregion The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
                     } else {
+                        #region The parent folder is not a root folder (this is good)
                         $strRemainderOfPath = $WorkingPath.Substring($strParentFolder.Length + 1, $WorkingPath.Length - $strParentFolder.Length - 1)
 
                         $strFolderTarget = $strParentFolder
@@ -6411,8 +6422,9 @@ function Repair-NTFSPermissionsRecursively {
                         # TODO: Rework to pass along whether the OS is Windows
                         $arrAvailableDriveLetters = @(Get-AvailableDriveLetter -PSVersion $versionPS)
                         if ($arrAvailableDriveLetters.Count -gt 0) {
+                            #region Drive Letters Available ########################
                             $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                            $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
+                            $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
@@ -6422,10 +6434,14 @@ function Repair-NTFSPermissionsRecursively {
                             $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                             if ($boolPathAvailable -eq $false) {
+                                #region The drive substitution seems to have failed
                                 Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                 $intReturnCode = -1
+                                #endregion The drive substitution seems to have failed
                             } else {
+                                #region The drive substitution was successful ######
                                 $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+                                #endregion The drive substitution was successful ######
                             }
 
                             $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -6447,6 +6463,7 @@ function Repair-NTFSPermissionsRecursively {
                             if ($intReturnCode -eq 0) {
                                 $boolSubstWorked = $true
                             }
+                            #endregion Drive Letters Available ########################
                         }
                         #endregion Mitigate Path Length with Drive Substitution ###############
 
@@ -6458,14 +6475,18 @@ function Repair-NTFSPermissionsRecursively {
                         # If a substituted drive failed, try a symbolic link instead
                         $boolSymbolicLinkWorked = $false
                         if ($boolSubstWorked -eq $false) {
+                            #region The earlier attempt at a drive substitution was not successful
                             $boolSymbolicLinkTargetFound = $false
                             $strSymbolicLinkFolderName = ''
                             if ($strFolderTarget.Length -gt 35) {
+                                #region We can use a GUID for the symbolic link folder name
                                 # Use a GUID to avoid name collisions
                                 $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
                                 $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
                                 $boolSymbolicLinkTargetFound = $true
+                                #endregion We can use a GUID for the symbolic link folder name
                             } elseif ($strFolderTarget.Length -gt 5) {
+                                #region We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                                 # Use a single character folder path to keep the name as short as possible
                                 for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
                                     $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
@@ -6477,33 +6498,41 @@ function Repair-NTFSPermissionsRecursively {
                                         break
                                     }
                                 }
+                                #endregion We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                             } else {
+                                #region We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                                 # The path is already short enough; cannot create a symbolic link
                                 # $boolSymbolicLinkTargetFound = $false
+                                #endregion We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                             }
 
                             if ($boolSymbolicLinkTargetFound -eq $true) {
+                                #region We found a suitable symbolic link target ###
                                 # Create the symbolic link
                                 $versionPS = Get-PSVersion
                                 if ($versionPS -ge ([version]'5.0')) {
+                                    #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                     # PowerShell 5.0 and newer can make symbolic links in PowerShell
                                     Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
                                     # TODO: Test this with a path containing a dollar sign ($)
                                     New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                    #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                 } else {
+                                    #region PowerShell 4.0 or older: make the symbolic link using mklink command
                                     # Need to use mklink command in command prompt instead
                                     # TODO: Test this with a path containing a dollar sign ($)
-                                    $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
+                                    $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                     Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
+                                    #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                 }
 
                                 # Confirm the path is ready
                                 $strJoinedPath = ''
                                 $boolPathAvailable = Wait-PathToBeReady -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
-                                if ($boolErrorOccurredUsingNewPath -eq $true) {
+                                if ($boolPathAvailable -eq $false) {
                                     Write-Error ('Unable to process the path "' + $strFolderTarget.Replace('$', '`$') + '" because the attempt to mitigate path length using drive substitution failed and the attempt to create a symbolic link also failed.')
                                     $intReturnCode = -2
                                 } else {
@@ -6534,63 +6563,84 @@ function Repair-NTFSPermissionsRecursively {
                                 if ($boolPathUnavailable -eq $false) {
                                     Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
                                 }
+                                #endregion We found a suitable symbolic link target ###
                             }
+                            #endregion The earlier attempt at a drive substitution was not successful
                         }
                         #endregion Mitigate Path Length with Symbolic Link ####################
 
                         if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
+                            #region Both drive substitution and symbolic link failed
                             Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
                             $intFunctionReturn = -3
                             return $intFunctionReturn
+                            #endregion Both drive substitution and symbolic link failed
                         }
+                        #endregion The parent folder is not a root folder (this is good)
                     }
+                    #endregion The parent folder that is under the length limit is different than the last shortened path (this is good)
                 }
+                #endregion We found a parent folder that is within the path length limit
             } elseif ($boolPossibleAttemptsExceeded -eq $true) {
+                #region No parent folder that is within the path length limit was found
                 Write-Error ('Cannot process the following path because it contains no parent folder element that is of an acceptable length with which to perform drive substitution or creation of a symbolic link: ' + $WorkingPath)
                 $intFunctionReturn = -4
                 return $intFunctionReturn
+                #endregion No parent folder that is within the path length limit was found
             } else {
+                #region Unexpected Error ###########################################
                 Write-Error ('While working on the path "' + $WorkingPath + '", the path was too long, and an acceptable parent folder element with which path substitution should be performed could not be found. This is unexpected.')
                 $intFunctionReturn = -10
                 return $intFunctionReturn
+                #endregion Unexpected Error ###########################################
             }
+            #endregion Running Normally (Not In Iterative Repair State); Recursion Allowed
         }
+        #endregion Path Length Exceeds Limit ##########################################
     } else {
-        # Path is not too long, or we are in "TemporaryPathLenghIgnoringAltMode"
+        #region Path is not too long, or the function was called with "IgnorePathLengthLimits"
         $boolCriticalErrorOccurred = $false
 
         $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
         if ($boolSuccess -eq $false) {
-            # Error occurred reading the ACL
+            #region An error occurred reading the ACL ##############################
 
-            # Take ownership
+            #region Take ownership #################################################
             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
             Write-Verbose ('About to run command: ' + $strCommand)
             $null = Invoke-Expression $strCommand
+            #endregion Take ownership #################################################
 
             # Should now be able to read permissions
 
             $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
             if ($boolSuccess -eq $false) {
+                #region Still unable to read permissions after running takeown.exe #
                 if ($boolDOS8dot3PathBeingUsed -eq $true) {
+                    #region We're already running using a DOS 8.3 path, and it didn't work
                     # We already tried a DOS 8.3 path, and it didn't work; nothing else
                     # we can do
                     Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...')
                     $intFunctionReturn = -5
                     return $intFunctionReturn
+                    #endregion We're already running using a DOS 8.3 path, and it didn't work
                 } else {
+                    #region We're not already running using a DOS 8.3 path, so try that
                     # Get the DOS 8.3 path and try again
                     $strDOS83Path = ''
                     # TODO: Get Scripting.FileSystemObject and pass it to Get-DOS83Path to improve efficiency
                     $boolSuccess = Get-DOS83Path -ReferenceToDOS8Dot3Path ([ref]$strDOS83Path) -Path $WorkingPath
                     if ($boolSuccess -eq $false) {
+                        #region Unable to get DOS 8.3 path #########################
                         Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.')
                         $intFunctionReturn = -13
                         return $intFunctionReturn
+                        #endregion Unable to get DOS 8.3 path #########################
                     } else {
+                        #region We got the DOS 8.3 path ############################
                         Write-Verbose ('Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path)
                         if ($boolIgnorePathLengthLimits) {
                             # Run in DOS 8.3 path mode and ignore path length limits
@@ -6600,11 +6650,15 @@ function Repair-NTFSPermissionsRecursively {
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -DOS8dot3PathBeingUsed
                         }
                         return $intReturnCode
+                        #endregion We got the DOS 8.3 path ############################
                     }
+                    #endregion We're not already running using a DOS 8.3 path, so try that
                 }
+                #endregion Still unable to read permissions after running takeown.exe #
             }
+            #endregion An error occurred reading the ACL ##############################
         } else {
-            # Able to read the permissions of the parent folder, continue
+            #region Able to read the ACL (permissions) of the item #################
 
             # TODO: Review this more closely; I don't believe this is necessary
             # anymore because Get-AclSafely now returns the permission object
@@ -6630,58 +6684,84 @@ function Repair-NTFSPermissionsRecursively {
             # }
 
             if ($null -eq $objThisFolderPermission) {
-                # An error did not occur retrieving permissions; however no permissions were retrieved
+                #region An error did not occur retrieving permissions; however no permissions were retrieved
                 # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
 
-                # Take ownership
+                #region Take ownership #############################################
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
                 Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
+                #endregion Take ownership #############################################
 
                 # Should now be able to read permissions
 
                 $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
                 if ($boolSuccess -eq $false) {
-                    # We had success reading permissions before, but now that we took
-                    # ownership, we suddenly cannot read them. This is a critical error.
+                    #region We had success reading permissions before, but now that we took ownership, we suddenly cannot read them
+                    # This is a critical error.
                     Write-Error ('After taking ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, the script is unable to read permissions from the folder/file using Get-Acl. The command used to take ownership was:' + "`n`n" + $strCommand)
                     $intFunctionReturn = -6
                     $boolCriticalErrorOccurred = $true
                     return $intFunctionReturn
+                    #endregion We had success reading permissions before, but now that we took ownership, we suddenly cannot read them
+                } else {
+                    #region The script was able to read permissions after taking ownership
+                    if ($null -eq $objThisFolderPermission) {
+                        #region An error did not occur retrieving permissions the second time; however no permissions were retrieved
+                        Write-Warning ('The script was able read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, even after taking ownership. It''s possibe this is becasue the ACL is blank/empty on the object, but that is unusual.')
+                        #endregion An error did not occur retrieving permissions the second time; however no permissions were retrieved
+                    }
+                    #endregion The script was able to read permissions after taking ownership
                 }
+                #endregion An error did not occur retrieving permissions; however no permissions were retrieved
             }
+            #endregion Able to read the ACL (permissions) of the item #################
         }
 
         if ($boolCriticalErrorOccurred -eq $false) {
+            #region We were able to read the permissions on the object - or, potentially, the object has an empty ACL
             if ($null -eq $objThis) {
+                #region The System.IO.DirectoryInfo or System.IO.FileInfo object was null after retrieving the ACL
                 if ($WorkingPath.Contains('[') -or $WorkingPath.Contains(']') -or $WorkingPath.Contains('`')) {
-                    # Need to escape characters
+                    #region Working path contains characters that potentially need to be escaped
                     if ($versionPS.Major -ge 3) {
-                        # PowerShell v3 and newer supports -LiteralPath
+                        #region PowerShell v3 and newer supports -LiteralPath
                         # -Force parameter is required to get hidden items
                         $objThis = Get-Item -LiteralPath $WorkingPath -Force
+                        #endregion PowerShell v3 and newer supports -LiteralPath
                     } else {
+                        #region PowerShell v1 and v2 does not support -LiteralPath; escape the characters
                         # -Force parameter is required to get hidden items
                         $objThis = Get-Item -Path ((($WorkingPath.Replace('[', '`[')).Replace(']', '`]')).Replace('`', '``')) -Force
+                        #endregion PowerShell v1 and v2 does not support -LiteralPath; escape the characters
                     }
+                    #endregion Working path contains characters that potentially need to be escaped
                 } else {
+                    #region Working path does not contain characters that need to be escaped
                     # -Force parameter is required to get hidden items
                     $objThis = Get-Item $WorkingPath -Force
+                    #endregion Working path does not contain characters that need to be escaped
                 }
+                #endregion The System.IO.DirectoryInfo or System.IO.FileInfo object was null after retrieving the ACL
             }
 
             if ($null -eq $objThisFolderPermission) {
+                #region The permissions object was null, indicating that the ACL was blank/empty
                 $arrACEs = @()
+                #endregion The permissions object was null, indicating that the ACL was blank/empty
             } else {
+                #region The permissions object was not null
                 $arrACEs = @($objThisFolderPermission.Access)
+                #endregion The permissions object was not null
             }
 
             $boolBuiltInAdministratorsDenyEntryFound = $false
             $boolBuiltInAdministratorsHaveSufficientAccess = $false
             $boolSYSTEMAccountDenyEntryFound = $false
             $boolSYSTEMAccountHasSufficientAccess = $false
+            #TODO: Remove "additional administrator" work from this section
             $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
             if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
                 $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
@@ -6692,8 +6772,10 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             $arrACEs | ForEach-Object {
+                #region Looping through each access control entry (ACE) in the ACL
                 $objThisACE = $_
                 if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+                    #region Found an ACE for the Built-In Administrators group #####
                     if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                         $boolBuiltInAdministratorsDenyEntryFound = $true
                     } else {
@@ -6709,7 +6791,9 @@ function Repair-NTFSPermissionsRecursively {
                             }
                         }
                     }
+                    #endregion Found an ACE for the Built-In Administrators group #####
                 } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                    #region Found an ACE for the SYSTEM account ####################
                     if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                         $boolSYSTEMAccountDenyEntryFound = $true
                     } else {
@@ -6725,6 +6809,7 @@ function Repair-NTFSPermissionsRecursively {
                             }
                         }
                     }
+                    #endregion Found an ACE for the SYSTEM account ####################
                 } else {
                     # check additional accounts
                     $boolFoundGroup = $false
@@ -6779,6 +6864,7 @@ function Repair-NTFSPermissionsRecursively {
                         }
                     }
                 }
+                #endregion Looping through each access control entry (ACE) in the ACL
             }
 
             if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $true) {
@@ -6815,6 +6901,7 @@ function Repair-NTFSPermissionsRecursively {
             $strAllCommandsInThisSection = ''
 
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false) {
+                #region Built-In Administrators group does not have sufficient access
                 Write-Verbose ('The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for administrators
@@ -6827,14 +6914,17 @@ function Repair-NTFSPermissionsRecursively {
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls.Value + ':(F)"'
                 }
                 if ($IterativeRepairState -le 1) {
+                    # For iterative repair state 1 or 2, we do not suppress errors
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
                 Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
+                #endregion Built-In Administrators group does not have sufficient access
             }
 
             if ($boolSYSTEMAccountHasSufficientAccess -eq $false) {
+                #region SYSTEM account does not have sufficient access #############
                 Write-Verbose ('The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder "' + $WorkingPath + '".')
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                 # Add ACE for SYSTEM
@@ -6847,11 +6937,13 @@ function Repair-NTFSPermissionsRecursively {
                     $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls.Value + ':(F)"'
                 }
                 if ($IterativeRepairState -le 1) {
+                    # For iterative repair state 1 or 2, we do not suppress errors
                     $strCommand += ' 2>&1'
                 }
                 $strAllCommandsInThisSection += "`n" + $strCommand
                 Write-Verbose ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
+                #endregion SYSTEM account does not have sufficient access #############
             }
 
             if ($boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false) {
@@ -6895,11 +6987,11 @@ function Repair-NTFSPermissionsRecursively {
             }
 
             if ($boolPermissionAdjustmentNecessary) {
-                # Permissions should be fixed. Check them again.
+                #region Permissions adjustments were attempted; re-read permissions to verify they are now correct
 
                 $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisFolderPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
                 if ($boolSuccess -eq $false) {
-                    # An error occurred reading permissions with Get-Acl
+                    #region An error occurred reading permissions with Get-Acl after attempts were made to fix permissions
                     #
                     # We had success reading permissions before, but now that we
                     # granted accounts permission, we suddenly cannot read them. This
@@ -6908,7 +7000,9 @@ function Repair-NTFSPermissionsRecursively {
                     $intFunctionReturn = -7
                     $boolCriticalErrorOccurred = $true
                     return $intFunctionReturn
+                    #endregion An error occurred reading permissions with Get-Acl after attempts were made to fix permissions
                 } else {
+                    #region The script was able to read permissions after it attempted permission fixes
                     # TODO: Review this more closely; I don't believe this is
                     # necessary anymore because Get-AclSafely now returns the
                     # permission object without needing to copy it
@@ -6937,8 +7031,10 @@ function Repair-NTFSPermissionsRecursively {
                     }
 
                     $arrACEs | ForEach-Object {
+                        #region Looping through each access control entry (ACE) in the ACL
                         $objThisACE = $_
                         if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+                            #region Found an ACE for the Built-In Administrators group
                             if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 $boolBuiltInAdministratorsDenyEntryFound = $true
                             } else {
@@ -6954,7 +7050,9 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                 }
                             }
+                            #endregion Found an ACE for the Built-In Administrators group
                         } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                            #region Found an ACE for the SYSTEM account ############
                             if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 $boolSYSTEMAccountDenyEntryFound = $true
                             } else {
@@ -6970,6 +7068,7 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                 }
                             }
+                            #endregion Found an ACE for the SYSTEM account ############
                         } else {
                             # check additional accounts
                             $boolFoundGroup = $false
@@ -7024,6 +7123,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                             }
                         }
+                        #endregion Looping through each access control entry (ACE) in the ACL
                     }
 
                     if ($null -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
@@ -7051,17 +7151,20 @@ function Repair-NTFSPermissionsRecursively {
                     }
 
                     if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
+                        #region Permissions adjustments were attempted; however, they are still not correct
                         Write-Verbose ('Despite attempting to apply permissions to the folder/file, the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.')
                         # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
                         if ($IterativeRepairState -eq 0) {
-                            # Try taking ownership of the folder/file
+                            #region We are running normally (not in an iterative repair state), so we can try taking ownership of the folder/file
 
-                            # Take ownership
+                            #region Take ownership using takeown.exe ###############
                             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
                             $strCommand += ' 2>&1'
                             Write-Verbose ('About to run command: ' + $strCommand)
                             $null = Invoke-Expression $strCommand
+                            #endregion Take ownership using takeown.exe ###############
+
                             # Restart process without recursion flag, repair phase 1
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IterativeRepairState 1
 
@@ -7072,14 +7175,19 @@ function Repair-NTFSPermissionsRecursively {
 
                             # If we are still here, the repair was successful after
                             # taking ownership. Carry on with child objects
+
+                            #endregion We are running normally (not in an iterative repair state), so we can try taking ownership of the folder/file
                         } elseif ($IterativeRepairState -eq 1) {
+                            #region We are in repair phase 1, so we can try taking ownership of the folder/file with Set-Acl instead of takeown.exe
                             # Try taking ownership of the folder/file with Set-Acl
 
-                            # Take ownership
+                            #region Take ownership using Set-Acl ###################
                             $objThisFolderPermission.SetOwner([System.Security.Principal.NTAccount]($NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls))
                             # TODO: Create Set-ACLSafely function to suppress errors
                             Set-Acl -Path $WorkingPath -AclObject $objThisFolderPermission
                             # Restart process without recursion flag, phase 2
+                            #endregion Take ownership using Set-Acl ###################
+
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RunWithoutRecursion -IterativeRepairState 2
 
                             if ($intReturnCode -ne 0) {
@@ -7089,196 +7197,44 @@ function Repair-NTFSPermissionsRecursively {
 
                             # If we are still here, the repair was successful after
                             # taking ownership. Carry on with child objects
+
+                            #endregion We are in repair phase 1, so we can try taking ownership of the folder/file with Set-Acl instead of takeown.exe
                         } else {
+                            #region We are in repair phase 2, so we have already tried taking ownership using takeown.exe and Set-Acl; however, we still cannot add the required permissions to the object
                             Write-Warning ('The permissions on the folder "' + $WorkingPath + '" could not be repaired. Please repair them manually.')
+                            #endregion We are in repair phase 2, so we have already tried taking ownership using takeown.exe and Set-Acl; however, we still cannot add the required permissions to the object
                         }
+                        #endregion Permissions adjustments were attempted; however, they are still not correct
                     }
+                    #endregion The script was able to read permissions after it attempted permission fixes
                 }
+                #endregion Permissions adjustments were attempted; re-read permissions to verify they are now correct
             }
+            #endregion We were able to read the permissions on the object - or, potentially, the object has an empty ACL
         }
 
-        #region Programmatically Change Permissions via PowerShell #################
-        # $arrACEs is already initialized (and refreshed if permission changes were
-        # made above)
-
-        # Check to see if we are supposed to make any changes
-        if ($null -eq $ReferenceToHashtableOfKnownSIDs) {
-            $boolRemoveUnresolvedSIDs = $false
-        } else {
-            $boolRemoveUnresolvedSIDs = ($null -ne ($ReferenceToHashtableOfKnownSIDs.Value))
-        }
-
-        if ($boolRemoveUnresolvedSIDs -eq $true) {
-            # Changes are potentially required
-
-            # Make a copy of $arrACEs and store it in $arrWorkingACEs
-            $arrWorkingACEs = @($arrACEs | Where-Object { $_.IsInherited -eq $false } |
-                    ForEach-Object {
-                        $strIdentityReference = $_.IdentityReference.Value
-                        $intFileSystemRights = [int]($_.FileSystemRights)
-                        $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$intFileSystemRights
-                        $intInheritanceFlags = [int]($_.InheritanceFlags)
-                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
-                        $intPropagationFlags = [int]($_.PropagationFlags)
-                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]$intPropagationFlags
-                        $intAccessControlType = [int]($_.AccessControlType)
-                        $accessControlType = [System.Security.AccessControl.AccessControlType]$intAccessControlType
-
-                        New-Object System.Security.AccessControl.FileSystemAccessRule($strIdentityReference, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
-                    })
-
-            $intNumberOfItems = $arrWorkingACEs.Count
-            $intLastNumberOfItems = $arrACEs.Count
-
-            $arrACETracking = New-Object bool[] $intNumberOfItems
-            for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
-                $arrACETracking[$intCounterA] = $false
-            }
-
-            $boolACLChangeMade = $false
-
-            for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
-                if (($arrWorkingACEs[$intCounterA]).IsInherited -eq $false) {
-                    # ACE is not inherited
-                    Write-Verbose ('Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".')
-                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
-                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
-                            # ACE is a SID
-                            if ($boolRemoveUnresolvedSIDs -eq $true) {
-                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
-                                } else {
-                                    # Not a protected SID
-                                    if ($arrACETracking[$intCounterA] -eq $true) {
-                                        Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
-                                    }
-                                    Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
-                                    $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
-                                    if ($boolSuccess -eq $false) {
-                                        # Permissions were not removed
-                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
-                                    } else {
-                                        $arrACETracking[$intCounterA] = $true
-                                        # Test to see if permissions were removed by comparing the ACE count
-                                        $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
-                                        if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                                            # Permissions were removed
-                                            Write-Verbose ('...the unresolved SID was removed...')
-                                            $intLastNumberOfItems = $intCurrentNumberOfItems
-                                            $boolACLChangeMade = $true
-                                        } else {
-                                            # Permissions were not removed
-                                            Write-Verbose ('...the unresolved SID was not removed...')
-                                        }
-                                    }
-                                }
-                            }
-                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
-                            # ACE is a SID (string)
-                            if ($boolRemoveUnresolvedSIDs -eq $true) {
-                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
-                                } else {
-                                    # Not a protected SID
-                                    if ($arrACETracking[$intCounterA] -eq $true) {
-                                        Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
-                                    }
-                                    Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
-                                    $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
-                                    $fileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
-                                    $inheritanceFlags = ($arrWorkingACEs[$intCounterA]).InheritanceFlags
-                                    $propagationFlags = ($arrWorkingACEs[$intCounterA]).PropagationFlags
-                                    $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
-                                    $fileSystemAccessRuleOld = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
-                                    $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
-                                    if ($boolSuccess -eq $false) {
-                                        # Permissions were not removed
-                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
-                                    } else {
-                                        $arrACETracking[$intCounterA] = $true
-                                        # Test to see if permissions were removed by comparing the ACE count
-                                        $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
-                                        if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                                            # Permissions were removed
-                                            Write-Verbose ('...the unresolved SID was removed...')
-                                            $intLastNumberOfItems = $intCurrentNumberOfItems
-                                            $boolACLChangeMade = $true
-                                        } else {
-                                            # Permissions were not removed
-                                            Write-Verbose ('...the unresolved SID was not removed...')
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            # Presumably ACE is an NTAccount per
-                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
-                        }
-                    }
-                } else {
-                    # ACE is inherited
-                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
-                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
-                            # ACE is a SID
-                            if ($boolRemoveUnresolvedSIDs -eq $true) {
-                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
-                                } else {
-                                    # Not a protected SID
-                                    Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
-                                }
-                            }
-                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
-                            # ACE is a SID (string)
-                            if ($boolRemoveUnresolvedSIDs -eq $true) {
-                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                    Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
-                                } else {
-                                    # Not a protected SID
-                                    Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
-                                }
-                            }
-                        } else {
-                            # Presumably ACE is an NTAccount per
-                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
-                        }
-                    }
-                }
-            }
-
-            # Write ACL changes to disk
-            if ($boolACLChangeMade -eq $true) {
-                Write-Verbose ('Writing ACL changes to disk for path "' + $WorkingPath + '".')
-                $boolSuccess = Write-ACLToObject -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToTargetObject ([ref]$objThis) -ReferenceToACL ([ref]$objThisFolderPermission)
-                if ($boolSuccess -eq $false) {
-                    # TODO: Capture $_.Exception.Message from failure in Write-ACLToObject
-                    # Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Error: ' + $_.Exception.Message + '; child folders and files will not be processed!')
-                    Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Child folders and files will not be processed!')
-                    intFunctionReturn = -14
-                    return $intFunctionReturn
-                }
-            }
-        }
-        #endregion Programmatically Change Permissions via PowerShell #################
-
+        #region We've theoretically repaired permissions on the object #############
         if ($objThis.PSIsContainer) {
-            # This object is a folder, not a file
+            #region This object is a folder, not a file ############################
 
             if ($boolAllowRecursion -eq $true) {
-                # Recursion is allowed
+                #region Recursion is allowed #######################################
 
                 # Get the child objects
                 $arrChildObjects = $null
                 $boolSuccess = Get-ChildItemUsingObjectSafely -ReferenceToChildItems ([ref]$arrChildObjects) -ReferenceToParentObject ([ref]$objThis)
 
                 if ($boolSuccess -eq $false) {
-                    # Error occurred probably because the path length is too long
+                    #region An error occurred getting child objects, probably because the path length is too long
 
                     if ($WorkingPath -eq $LastShortenedPath) {
+                        #region The path is already as short as it can be, so there is nothing further for this script to try
                         Write-Error ('Unable to enumerate child objects in path "' + $WorkingPath + '". This can occur if path length is too long. However, its path length has already been shortened, so there is nothing further for this script to try. Please repair the permissions on this folder manually.')
                         $intFunctionReturn = -8
                         return $intFunctionReturn
+                        #endregion The path is already as short as it can be, so there is nothing further for this script to try
                     } else {
+                        #region The path is not as short as it can be, so try again with a shorter path
                         if ($WorkingPath.Length -le 3) {
                             # The path is already as short as it can be, so there is
                             # nothing further for this script to try
@@ -7290,7 +7246,7 @@ function Repair-NTFSPermissionsRecursively {
                             $strFolderTarget = $WorkingPath
                             $strChildFolderOfTarget = ''
 
-                            #region Mitigate Path Length with Drive Substitution ###############
+                            #region Mitigate Path Length with Drive Substitution
                             # Inputs:
                             # $strFolderTarget
                             # $strChildFolderOfTarget
@@ -7299,8 +7255,9 @@ function Repair-NTFSPermissionsRecursively {
                             # TODO: Rework to pass along whether the OS is Windows
                             $arrAvailableDriveLetters = @(Get-AvailableDriveLetter -PSVersion $versionPS)
                             if ($arrAvailableDriveLetters.Count -gt 0) {
+                                #region Drive Letters Available ################
                                 $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                                $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
+                                $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                                 Write-Verbose ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
@@ -7310,10 +7267,14 @@ function Repair-NTFSPermissionsRecursively {
                                 $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                 if ($boolPathAvailable -eq $false) {
+                                    #region The drive substitution seems to have failed
                                     Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                     $intReturnCode = -1
+                                    #endregion The drive substitution seems to have failed
                                 } else {
+                                    #region The drive substitution was successful
                                     $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
+                                    #endregion The drive substitution was successful
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -7335,10 +7296,11 @@ function Repair-NTFSPermissionsRecursively {
                                 if ($intReturnCode -eq 0) {
                                     $boolSubstWorked = $true
                                 }
+                                #endregion Drive Letters Available ################
                             }
-                            #endregion Mitigate Path Length with Drive Substitution ###############
+                            #endregion Mitigate Path Length with Drive Substitution
 
-                            #region Mitigate Path Length with Symbolic Link ####################
+                            #region Mitigate Path Length with Symbolic Link ####
                             # Inputs:
                             # $strFolderTarget
                             # $strChildFolderOfTarget
@@ -7346,14 +7308,18 @@ function Repair-NTFSPermissionsRecursively {
                             # If a substituted drive failed, try a symbolic link instead
                             $boolSymbolicLinkWorked = $false
                             if ($boolSubstWorked -eq $false) {
+                                #region The earlier attempt at a drive substitution was not successful
                                 $boolSymbolicLinkTargetFound = $false
                                 $strSymbolicLinkFolderName = ''
                                 if ($strFolderTarget.Length -gt 35) {
+                                    #region We can use a GUID for the symbolic link folder name
                                     # Use a GUID to avoid name collisions
                                     $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
                                     $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
                                     $boolSymbolicLinkTargetFound = $true
+                                    #endregion We can use a GUID for the symbolic link folder name
                                 } elseif ($strFolderTarget.Length -gt 5) {
+                                    #region We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                                     # Use a single character folder path to keep the name as short as possible
                                     for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
                                         $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
@@ -7365,26 +7331,34 @@ function Repair-NTFSPermissionsRecursively {
                                             break
                                         }
                                     }
+                                    #endregion We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                                 } else {
+                                    #region We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                                     # The path is already short enough; cannot create a symbolic link
                                     # $boolSymbolicLinkTargetFound = $false
+                                    #endregion We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                                 }
 
                                 if ($boolSymbolicLinkTargetFound -eq $true) {
+                                    #region We found a suitable symbolic link target
                                     # Create the symbolic link
                                     $versionPS = Get-PSVersion
                                     if ($versionPS -ge ([version]'5.0')) {
+                                        #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                         # PowerShell 5.0 and newer can make symbolic links in PowerShell
                                         Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
                                         # TODO: Test this with a path containing a dollar sign ($)
                                         New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                        #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                     } else {
+                                        #region PowerShell 4.0 or older: make the symbolic link using mklink command
                                         # Need to use mklink command in command prompt instead
                                         # TODO: Test this with a path containing a dollar sign ($)
                                         $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                         $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                         Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                         $null = Invoke-Expression $strCommand
+                                        #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                     }
 
                                     # Confirm the path is ready
@@ -7422,22 +7396,28 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($boolPathUnavailable -eq $false) {
                                         Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
                                     }
+                                    #endregion We found a suitable symbolic link target
                                 }
+                                #endregion The earlier attempt at a drive substitution was not successful
                             }
-                            #endregion Mitigate Path Length with Symbolic Link ####################
+                            #endregion Mitigate Path Length with Symbolic Link ####
 
                             if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
+                                #region Both drive substitution and symbolic link failed
                                 Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
                                 $intFunctionReturn = -9
                                 return $intFunctionReturn
+                                #endregion Both drive substitution and symbolic link failed
                             }
                         }
+                        #endregion The path is not as short as it can be, so try again with a shorter path
                     }
+                    #endregion An error occurred getting child objects, probably because the path length is too long
                 } else {
-                    # No error occurred getting child items
+                    #region No error occurred getting child items ##################
                     $boolLengthOfChildrenOK = $true
 
-                    # Check the length of all child objects first
+                    #region Check the length of all child objects first ############
                     $arrChildObjects | ForEach-Object {
                         $objDirectoryOrFileInfoChild = $_
 
@@ -7447,22 +7427,22 @@ function Repair-NTFSPermissionsRecursively {
                             $boolLengthOfChildrenOK = $false
                         }
                     }
+                    #endregion Check the length of all child objects first ############
 
                     if ($boolLengthOfChildrenOK -eq $false -and $boolIgnorePathLengthLimits -ne $true) {
-                        # One or more child objects are too long and we are not in
-                        # temporary path length ignoring mode yet, so try again with
-                        # temporary path length ignoring mode enabled
+                        #region One or more child objects are too long and we are not ignoring path length limits
 
                         if ($WorkingPath -eq $LastShortenedPath) {
-                            # We are not in temporary path length ignoring mode
-                            # yet, so try again with temporary path length
-                            # ignoring mode enabled
+                            #region Try again with IgnorePathLengthLimits enabled ##
                             Write-Verbose ('The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.')
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                             $intFunctionReturn = $intReturnCode
                             return $intFunctionReturn
+                            #endregion Try again with IgnorePathLengthLimits enabled ##
                         } else {
+                            #region The parent folder that is under the length limit is different than the last shortened path (this is good)
                             if ($WorkingPath.Length -le 3) {
+                                #region The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
                                 # The path is already as short as it can be, so there
                                 # is nothing further to do to mitigate path length
                                 #
@@ -7473,12 +7453,14 @@ function Repair-NTFSPermissionsRecursively {
                                 $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                                 $intFunctionReturn = $intReturnCode
                                 return $intFunctionReturn
+                                #endregion The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
                             } else {
+                                #region The parent folder is not a root folder (this is good)
                                 # Try again with a shorter path
                                 $strFolderTarget = $WorkingPath
                                 $strChildFolderOfTarget = ''
 
-                                #region Mitigate Path Length with Drive Substitution ###############
+                                #region Mitigate Path Length with Drive Substitution
                                 # Inputs:
                                 # $strFolderTarget
                                 # $strChildFolderOfTarget
@@ -7487,8 +7469,9 @@ function Repair-NTFSPermissionsRecursively {
                                 # TODO: Rework to pass along whether the OS is Windows
                                 $arrAvailableDriveLetters = @(Get-AvailableDriveLetter -PSVersion $versionPS)
                                 if ($arrAvailableDriveLetters.Count -gt 0) {
+                                    #region Drive Letters Available ############
                                     $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
-                                    $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
+                                    $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
                                     Write-Verbose ('About to run command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
@@ -7498,15 +7481,19 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolPathAvailable = Wait-PathToBeReady -Path ($strDriveLetterToUse + ':') -ChildItemPath $strChildFolderOfTarget -ReferenceToJoinedPath ([ref]$strJoinedPath) -ReferenceToUseGetPSDriveWorkaround $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful
 
                                     if ($boolPathAvailable -eq $false) {
+                                        #region The drive substitution seems to have failed
                                         Write-Verbose ('There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...')
                                         $intReturnCode = -1
+                                        #endregion The drive substitution seems to have failed
                                     } else {
+                                        #region The drive substitution was successful
                                         if ($boolIgnorePathLengthLimits) {
                                             # Run with ignoring path length limits
                                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -IgnorePathLengthLimits
                                         } else {
                                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
                                         }
+                                        #endregion The drive substitution was successful
                                     }
 
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
@@ -7528,10 +7515,11 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($intReturnCode -eq 0) {
                                         $boolSubstWorked = $true
                                     }
+                                    #endregion Drive Letters Available ############
                                 }
-                                #endregion Mitigate Path Length with Drive Substitution ###############
+                                #endregion Mitigate Path Length with Drive Substitution
 
-                                #region Mitigate Path Length with Symbolic Link ####################
+                                #region Mitigate Path Length with Symbolic Link
                                 # Inputs:
                                 # $strFolderTarget
                                 # $strChildFolderOfTarget
@@ -7539,14 +7527,18 @@ function Repair-NTFSPermissionsRecursively {
                                 # If a substituted drive failed, try a symbolic link instead
                                 $boolSymbolicLinkWorked = $false
                                 if ($boolSubstWorked -eq $false) {
+                                    #region The earlier attempt at a drive substitution was not successful
                                     $boolSymbolicLinkTargetFound = $false
                                     $strSymbolicLinkFolderName = ''
                                     if ($strFolderTarget.Length -gt 35) {
+                                        #region We can use a GUID for the symbolic link folder name
                                         # Use a GUID to avoid name collisions
                                         $strSymbolicLinkFolderName = [System.Guid]::NewGuid().ToString()
                                         $strSymbolicLinkFolderName = $strSymbolicLinkFolderName.Replace('-', '')
                                         $boolSymbolicLinkTargetFound = $true
+                                        #endregion We can use a GUID for the symbolic link folder name
                                     } elseif ($strFolderTarget.Length -gt 5) {
+                                        #region We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                                         # Use a single character folder path to keep the name as short as possible
                                         for ($intCounter = 97; $intCounter -le 122; $intCounter++) {
                                             $strPossibleSymbolicLinkFolder = [string]([char]$intCounter)
@@ -7558,26 +7550,34 @@ function Repair-NTFSPermissionsRecursively {
                                                 break
                                             }
                                         }
+                                        #endregion We cannot use a GUID for the symbolic link folder name, so we'll use a single character instead
                                     } else {
+                                        #region We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                                         # The path is already short enough; cannot create a symbolic link
                                         # $boolSymbolicLinkTargetFound = $false
+                                        #endregion We cannot create a symbolic link because it won't help; the parent folder path is too short for it to be effective
                                     }
 
                                     if ($boolSymbolicLinkTargetFound -eq $true) {
+                                        #region We found a suitable symbolic link target
                                         # Create the symbolic link
                                         $versionPS = Get-PSVersion
                                         if ($versionPS -ge ([version]'5.0')) {
+                                            #region PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                             # PowerShell 5.0 and newer can make symbolic links in PowerShell
                                             Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via PowerShell:' + "`n" + 'Symbolic link path: ' + 'C:\' + $strSymbolicLinkFolderName + "`n" + 'Target path: ' + $strFolderTarget.Replace('$', '`$'))
                                             # TODO: Test this with a path containing a dollar sign ($)
                                             New-Item -ItemType SymbolicLink -Path (Join-Path 'C:' $strSymbolicLinkFolderName) -Target $strFolderTarget.Replace('$', '`$') | Out-Null
+                                            #endregion PowerShell 5.0 or newer: make the symbolic link using native PowerShell
                                         } else {
+                                            #region PowerShell 4.0 or older: make the symbolic link using mklink command
                                             # Need to use mklink command in command prompt instead
                                             # TODO: Test this with a path containing a dollar sign ($)
                                             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                             $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
                                             Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                             $null = Invoke-Expression $strCommand
+                                            #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                         }
 
                                         # Confirm the path is ready
@@ -7615,22 +7615,28 @@ function Repair-NTFSPermissionsRecursively {
                                         if ($boolPathUnavailable -eq $false) {
                                             Write-Warning ('There was an issue processing the path "' + $WorkingPath + '". A symbolic link (' + (Join-Path 'C:' $strSymbolicLinkFolderName) + ') was used to work-around a long path issue. When the processing was completed, the symbolic link was attempted to be removed. However, its removal failed. Please remove the symbolic link manually.')
                                         }
+                                        #endregion We found a suitable symbolic link target
                                     }
+                                    #endregion The earlier attempt at a drive substitution was not successful
                                 }
-                                #endregion Mitigate Path Length with Symbolic Link ####################
+                                #endregion Mitigate Path Length with Symbolic Link
 
                                 if ($boolSubstWorked -eq $false -and $boolSymbolicLinkWorked -eq $false) {
+                                    #region Both drive substitution and symbolic link failed
                                     Write-Error ('Cannot process the following path because it is too long and attempted mitigations using drive substitution and a symbolic link failed: ' + $WorkingPath)
                                     $intFunctionReturn = -11
                                     return $intFunctionReturn
+                                    #endregion Both drive substitution and symbolic link failed
                                 }
+                                #endregion The parent folder is not a root folder (this is good)
                             }
+                            #endregion The parent folder that is under the length limit is different than the last shortened path (this is good)
                         }
+                        #endregion One or more child objects are too long and we are not ignoring path length limits
                     } else {
-                        # The length of all child objects was OK, or we are in
-                        # temporary path length ignoring mode
+                        #region The length of all child objects was OK, or IgnorePathLengthLimits was specified
 
-                        # Process files first
+                        #region Process all child files ############################
                         $arrChildObjects | Where-Object { $_.PSIsContainer -eq $false } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
                             # Process the file
@@ -7645,8 +7651,9 @@ function Repair-NTFSPermissionsRecursively {
                                 $intFunctionReturn = $intReturnCode
                             }
                         }
+                        #endregion Process all child files ############################
 
-                        # Next, process folders/directories/containers
+                        #region Process all child folders recursively ##############
                         $arrChildObjects | Where-Object { $_.PSIsContainer -eq $true } | ForEach-Object {
                             $objDirectoryOrFileInfoChild = $_
                             # Recursively process the child directory
@@ -7656,10 +7663,233 @@ function Repair-NTFSPermissionsRecursively {
                                 $intFunctionReturn = $intReturnCode
                             }
                         }
+                        #endregion Process all child folders recursively ##############
+                        #endregion The length of all child objects was OK, or IgnorePathLengthLimits was specified
                     }
+                    #endregion No error occurred getting child items ##################
                 }
+                #endregion Recursion is allowed #######################################
             }
+            #endregion This object is a folder, not a file ############################
         }
+
+        #region Programmatically Change Permissions via PowerShell #################
+        # $arrACEs is already initialized (and refreshed if permission changes were
+        # made above)
+
+        #region Check to see if unresolved SIDs should be removed ##################
+        if ($null -eq $ReferenceToHashtableOfKnownSIDs) {
+            $boolRemoveUnresolvedSIDs = $false
+        } else {
+            $boolRemoveUnresolvedSIDs = ($null -ne ($ReferenceToHashtableOfKnownSIDs.Value))
+        }
+        #endregion Check to see if unresolved SIDs should be removed ##################
+
+        #region Make a copy of $arrACEs and store it in $arrWorkingACEs ############
+        $arrWorkingACEs = @($arrACEs | Where-Object { $_.IsInherited -eq $false } |
+                ForEach-Object {
+                    $strIdentityReference = $_.IdentityReference.Value
+                    $intFileSystemRights = [int]($_.FileSystemRights)
+                    $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$intFileSystemRights
+                    $intInheritanceFlags = [int]($_.InheritanceFlags)
+                    $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
+                    $intPropagationFlags = [int]($_.PropagationFlags)
+                    $propagationFlags = [System.Security.AccessControl.PropagationFlags]$intPropagationFlags
+                    $intAccessControlType = [int]($_.AccessControlType)
+                    $accessControlType = [System.Security.AccessControl.AccessControlType]$intAccessControlType
+
+                    New-Object System.Security.AccessControl.FileSystemAccessRule($strIdentityReference, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                })
+        #endregion Make a copy of $arrACEs and store it in $arrWorkingACEs ############
+
+        # Initialize variables used to confirm ACE count changes after a change is
+        # made.
+        $intNumberOfItems = $arrWorkingACEs.Count
+        $intLastNumberOfItems = $arrACEs.Count
+
+        # Initialize ACE tracker, which will be used to prevent duplicate operations
+        # on ACEs (this is more-relevant as we move beyond SID cleanup and other basic
+        # operations).
+        $arrACETracking = New-Object bool[] $intNumberOfItems
+        for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
+            $arrACETracking[$intCounterA] = $false
+        }
+
+        # Track at an overall level whether an ACL change was made; if so, we need to
+        # write the ACL back later.
+        $boolACLChangeMade = $false
+
+        for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
+            #region Looping through each ACE in the ACL ############################
+            if (($arrWorkingACEs[$intCounterA]).IsInherited -eq $false) {
+                #region Current ACE is not inherited ###############################
+                Write-Verbose ('Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".')
+                if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                    #region ACE has an IdentityReference ###########################
+                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                        #region ACE is a SID #######################################
+                        if ($boolRemoveUnresolvedSIDs -eq $true) {
+                            #region Function is set to remove unresolved SIDs ######
+                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                            } else {
+                                #region The SID is not a protected SID (meaning: it should be removed)
+                                if ($arrACETracking[$intCounterA] -eq $true) {
+                                    Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
+                                }
+                                Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                if ($boolSuccess -eq $false) {
+                                    #region Access rule removal failed #############
+                                    Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                    #endregion Access rule removal failed #############
+                                } else {
+                                    #region Access rule removal was successful #####
+                                    $arrACETracking[$intCounterA] = $true
+                                    # Test to see if permissions were removed by comparing the ACE count
+                                    $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                        #region Permissions confirmed removed based on change in ACE count
+                                        Write-Verbose ('...the unresolved SID was removed...')
+                                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                                        $boolACLChangeMade = $true
+                                        #endregion Permissions confirmed removed based on change in ACE count
+                                    } else {
+                                        #region Based on no change in ACE count, permissions were not removed
+                                        Write-Verbose ('...the unresolved SID was not removed...')
+                                        #endregion Based on no change in ACE count, permissions were not removed
+                                    }
+                                    #endregion Access rule removal was successful #####
+                                }
+                                #endregion The SID is not a protected SID (meaning: it should be removed)
+                            }
+                            #endregion Function is set to remove unresolved SIDs ######
+                        }
+                        #endregion ACE is a SID #######################################
+                    } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
+                        #region ACE is a SID (string) ##############################
+                        if ($boolRemoveUnresolvedSIDs -eq $true) {
+                            #region Function is set to remove unresolved SIDs ##
+                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                            } else {
+                                #region The SID is not a protected SID (meaning: it should be removed)
+                                if ($arrACETracking[$intCounterA] -eq $true) {
+                                    Write-Warning ('Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.')
+                                }
+                                Write-Verbose ('Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".')
+                                $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
+                                $fileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
+                                $inheritanceFlags = ($arrWorkingACEs[$intCounterA]).InheritanceFlags
+                                $propagationFlags = ($arrWorkingACEs[$intCounterA]).PropagationFlags
+                                $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
+                                $fileSystemAccessRuleOld = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisFolderPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
+                                if ($boolSuccess -eq $false) {
+                                    #region Access rule removal failed #########
+                                    Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                    #endregion Access rule removal failed #########
+                                } else {
+                                    #region Access rule removal was successful #
+                                    $arrACETracking[$intCounterA] = $true
+                                    # Test to see if permissions were removed by comparing the ACE count
+                                    $intCurrentNumberOfItems = $objThisFolderPermission.Access.Count
+                                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                        #region Permissions confirmed removed based on change in ACE count
+                                        Write-Verbose ('...the unresolved SID was removed...')
+                                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                                        $boolACLChangeMade = $true
+                                        #endregion Permissions confirmed removed based on change in ACE count
+                                    } else {
+                                        #region Based on no change in ACE count, permissions were not removed
+                                        Write-Verbose ('...the unresolved SID was not removed...')
+                                        #endregion Based on no change in ACE count, permissions were not removed
+                                    }
+                                    #endregion Access rule removal was successful #
+                                }
+                                #endregion The SID is not a protected SID (meaning: it should be removed)
+                            }
+                            #endregion Function is set to remove unresolved SIDs ##
+                        }
+                        #endregion ACE is a SID (string) ##############################
+                    } else {
+                        #region ACE is presumably an NTAccount #####################
+                        # See:
+                        # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+
+                        # TODO: Add code to look for BUILTIN\Administrators and
+                        # NT AUTHORITY\SYSTEM with container inherit and object inherit
+                        # in situations where inheritance is broken on an object or the
+                        # recursion depth is 0
+                        #endregion ACE is presumably an NTAccount #####################
+                    }
+                    #endregion ACE has an IdentityReference ###########################
+                }
+                #endregion Current ACE is not inherited ###############################
+            } else {
+                #region Current ACE is inherited ###################################
+                if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                    #region ACE has an IdentityReference ###########################
+                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                        #region ACE is a SID #######################################
+                        if ($boolRemoveUnresolvedSIDs -eq $true) {
+                            #region Function is set to remove unresolved SIDs ######
+                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                            } else {
+                                # Not a protected SID
+                                Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                            }
+                            #endregion Function is set to remove unresolved SIDs ######
+                        }
+                        #endregion ACE is a SID #######################################
+                    } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
+                        #region ACE is a SID (string) ##############################
+                        if ($boolRemoveUnresolvedSIDs -eq $true) {
+                            #region Function is set to remove unresolved SIDs ######
+                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                Write-Warning ('...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?')
+                            } else {
+                                #region The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
+                                # TODO: Display this warning only if the recursion
+                                # depth is 0
+                                Write-Warning ('An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.')
+                                #endregion The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
+                            }
+                            #endregion Function is set to remove unresolved SIDs ######
+                        }
+                        #endregion ACE is a SID (string) ##############################
+                    } else {
+                        #region ACE is presumably an NTAccount #####################
+                        # See:
+                        # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+                        #endregion ACE is presumably an NTAccount #####################
+                    }
+                    #endregion ACE has an IdentityReference ###########################
+                }
+                #endregion Current ACE is inherited ###################################
+            }
+            #endregion Looping through each ACE in the ACL ############################
+        }
+
+        if ($boolACLChangeMade -eq $true) {
+            #region At least once change was made to the ACL; we need to write it to disk
+            Write-Verbose ('Writing ACL changes to disk for path "' + $WorkingPath + '".')
+            $boolSuccess = Write-ACLToObject -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToTargetObject ([ref]$objThis) -ReferenceToACL ([ref]$objThisFolderPermission)
+            if ($boolSuccess -eq $false) {
+                #region Write-ACLToObject failed ###################################
+                # TODO: Capture $_.Exception.Message from failure in Write-ACLToObject
+                # Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Error: ' + $_.Exception.Message + '; child folders and files will not be processed!')
+                Write-Warning ('Unable to write ACL changes to disk for path "' + $WorkingPath + '". Child folders and files will not be processed!')
+                intFunctionReturn = -14
+                return $intFunctionReturn
+                #endregion Write-ACLToObject failed ###################################
+            }
+            #endregion At least once change was made to the ACL; we need to write it to disk
+        }
+        #endregion Programmatically Change Permissions via PowerShell #################
+        #endregion We've theoretically repaired permissions on the object #############
+        #endregion Path is not too long, or the function was called with "IgnorePathLengthLimits"
     }
     return $intFunctionReturn
 }
