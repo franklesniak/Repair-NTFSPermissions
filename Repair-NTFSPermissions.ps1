@@ -8218,10 +8218,11 @@ function Repair-NTFSPermissionsRecursively {
             #endregion Looping through each ACE in the ACL ############################
         }
 
-        if ($boolPermissionsInherited) {
-            #region At least some permissions are inherited ########################
+        # TODO: Add an -or clause to this for when the recursion depth is 0
+        if (-not $boolPermissionsInherited) {
+            #region No permissions are inherited ###################################
             # TODO: Take action here
-            #endregion At least some permissions are inherited ########################
+            #endregion No permissions are inherited ###################################
         }
 
         if ($boolACLChangeMade -eq $true) {
