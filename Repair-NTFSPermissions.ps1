@@ -4843,6 +4843,452 @@ function Repair-NTFSPermissionsRecursively {
         }
     }
 
+    function Add-AccessRuleRobust {
+        # .SYNOPSIS
+        # Adds an access rule to an object.
+        #
+        # .DESCRIPTION
+        # This function adds an access rule to a
+        # System.Security.AccessControl.DirectorySecurity or similar object "safely"
+        # (i.e., without throwing any errors should the process fail) and in a way that
+        # automaticaly retries if an error occurs.
+        #
+        # .PARAMETER CurrentAttemptNumber
+        # This parameter is required; it is an integer indicating the current attempt
+        # number. When calling this function for the first time, it should be 1.
+        #
+        # .PARAMETER MaxAttempts
+        # This parameter is required; it is an integer representing the maximum number
+        # of attempts that the function will observe before giving up.
+        #
+        # .PARAMETER ReferenceToAccessControlListObject
+        # This parameter is required; it is a reference to a
+        # System.Security.AccessControl.DirectorySecurity or similar object to which
+        # the access control entry will be added.
+        #
+        # .PARAMETER ReferenceToAccessRuleObject
+        # This parameter is required; it is a reference to a
+        # System.Security.AccessControl.FileSystemAccessRule or similar object that
+        # will be added to the access control list.
+        #
+        # .EXAMPLE
+        # $boolCheckForType = $true
+        # $boolRunGetAcl = $true
+        # $strPath = 'D:\Shared\Human_Resources'
+        # if ($strPath.Length -gt 248) {
+        #     if ($strPath.Substring(0, 2) -eq '\\') {
+        #         $strPath = '\\?\UNC\' + $strPath.Substring(2)
+        #     } else {
+        #         $strPath = '\\?\' + $strPath
+        #     }
+        # }
+        # $objDirectoryInfo = Get-Item -Path $strPath
+        # if (@(@($objDirectoryInfo.PSObject.Methods) | Where-Object { $_.Name -eq 'GetAccessControl' }).Count -ge 1) {
+        #     # The GetAccessControl() method is available on .NET Framework 2.x - 4.x
+        #     $objDirectorySecurity = $objDirectoryInfo.GetAccessControl()
+        # } else {
+        #     # The GetAccessControl() method is not available - this is expected on
+        #     # PowerShell Core 6.x and later
+        #     if ($boolCheckForType) {
+        #         $boolTypeNameAvailable = @([System.AppDomain]::CurrentDomain.GetAssemblies() | ForEach-Object { $_.GetType('System.IO.FileSystemAclExtensions') } | Where-Object { $_ }).Count -ge 1
+        #         if (-not $boolTypeNameAvailable) {
+        #             Add-Type -AssemblyName System.IO.FileSystem.AccessControl
+        #             $boolCheckForType = $false
+        #         }
+        #     }
+        #     $objDirectorySecurity = [System.IO.FileSystemAclExtensions]::GetAccessControl($objDirectoryInfo)
+        #     # $objDirectorySecurity is created but may appear empty/uninitialized.
+        #     # This is because the object is missing additional properties that
+        #     # correspond to the way that PowerShell displays this object. You can fix
+        #     # this by running Get-Acl on any other object that has an ACL; once you
+        #     # do that, the $objDirectorySecurity object will have the "missing"
+        #     # properties and will display correctly in the console.
+        #     if ($boolRunGetAcl) {
+        #         $arrCommands = @(Get-Command -Name 'Get-Acl' -ErrorAction SilentlyContinue)
+        #         if ($arrCommands.Count -gt 0) {
+        #             [void](Get-Acl -Path $HOME)
+        #         }
+        #         $boolRunGetAcl = $false
+        #     }
+        # }
+        #
+        # # Add the access rule
+        # $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+        # $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+        # $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+        # $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+        # $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList 'BUILTIN\Administrators', $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+        # $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 8 -ReferenceToAccessControlListObject ([ref]$objDirectorySecurity) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+        #
+        # .INPUTS
+        # None. You can't pipe objects to Add-AccessRuleRobust.
+        #
+        # .OUTPUTS
+        # System.Boolean. Add-AccessRuleRobust returns a boolean value indicating
+        # whether the process completed successfully. $true means the process completed
+        # successfully; $false means there was an error.
+        #
+        # .NOTES
+        # This function also supports the use of positional parameters instead of named
+        # parameters. If positional parameters are used intead of named parameters,
+        # then four positional parameters are required:
+        #
+        # The first positional parameter is an integer indicating the current attempt
+        # number. When calling this function for the first time, it should be 1.
+        #
+        # The second positional parameter is an integer representing the maximum number
+        # of attempts that the function will observe before giving up.
+        #
+        # The third positional parameter is a reference to a
+        # System.Security.AccessControl.DirectorySecurity or similar object to which
+        # the access control entry will be added.
+        #
+        # The fourth positional parameter is a reference to a
+        # System.Security.AccessControl.FileSystemAccessRule or similar object that
+        # will be added to the access control list.
+        #
+        # Version: 1.1.20250108.0
+
+        #region License ############################################################
+        # Copyright (c) 2025 Frank Lesniak
+        #
+        # Permission is hereby granted, free of charge, to any person obtaining a copy
+        # of this software and associated documentation files (the "Software"), to deal
+        # in the Software without restriction, including without limitation the rights
+        # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        # copies of the Software, and to permit persons to whom the Software is
+        # furnished to do so, subject to the following conditions:
+        #
+        # The above copyright notice and this permission notice shall be included in
+        # all copies or substantial portions of the Software.
+        #
+        # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        # AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        # SOFTWARE.
+        #endregion License ############################################################
+
+        param (
+            [int]$CurrentAttemptNumber = 1,
+            [int]$MaxAttempts = 1,
+            [ref]$ReferenceToAccessControlListObject = ([ref]$null),
+            [ref]$ReferenceToAccessRuleObject = ([ref]$null)
+        )
+
+        #region FunctionsToSupportErrorHandling ####################################
+        function Get-ReferenceToLastError {
+            # .SYNOPSIS
+            # Gets a reference (memory pointer) to the last error that occurred.
+            #
+            # .DESCRIPTION
+            # Returns a reference (memory pointer) to $null ([ref]$null) if no
+            # errors on on the $error stack; otherwise, returns a reference to the
+            # last error that occurred.
+            #
+            # .EXAMPLE
+            # # Intentionally empty trap statement to prevent terminating errors
+            # # from halting processing
+            # trap { }
+            #
+            # # Retrieve the newest error on the stack prior to doing work:
+            # $refLastKnownError = Get-ReferenceToLastError
+            #
+            # # Store current error preference; we will restore it after we do some
+            # # work:
+            # $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+            #
+            # # Set ErrorActionPreference to SilentlyContinue; this will suppress
+            # # error output. Terminating errors will not output anything, kick to
+            # # the empty trap statement and then continue on. Likewise, non-
+            # # terminating errors will also not output anything, but they do not
+            # # kick to the trap statement; they simply continue on.
+            # $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+            #
+            # # Do something that might trigger an error
+            # Get-Item -Path 'C:\MayNotExist.txt'
+            #
+            # # Restore the former error preference
+            # $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+            #
+            # # Retrieve the newest error on the error stack
+            # $refNewestCurrentError = Get-ReferenceToLastError
+            #
+            # $boolErrorOccurred = $false
+            # if (($null -ne $refLastKnownError.Value) -and ($null -ne $refNewestCurrentError.Value)) {
+            #     # Both not $null
+            #     if (($refLastKnownError.Value) -ne ($refNewestCurrentError.Value)) {
+            #         $boolErrorOccurred = $true
+            #     }
+            # } else {
+            #     # One is $null, or both are $null
+            #     # NOTE: $refLastKnownError could be non-null, while
+            #     # $refNewestCurrentError could be null if $error was cleared;
+            #     # this does not indicate an error.
+            #     # So:
+            #     # If both are null, no error
+            #     # If $refLastKnownError is null and $refNewestCurrentError is
+            #     # non-null, error
+            #     # If $refLastKnownError is non-null and $refNewestCurrentError is
+            #     # null, no error
+            #     if (($null -eq $refLastKnownError.Value) -and ($null -ne $refNewestCurrentError.Value)) {
+            #         $boolErrorOccurred = $true
+            #     }
+            # }
+            #
+            # .INPUTS
+            # None. You can't pipe objects to Get-ReferenceToLastError.
+            #
+            # .OUTPUTS
+            # System.Management.Automation.PSReference ([ref]).
+            # Get-ReferenceToLastError returns a reference (memory pointer) to the
+            # last error that occurred. It returns a reference to $null
+            # ([ref]$null) if there are no errors on on the $error stack.
+            #
+            # .NOTES
+            # Version: 2.0.20241223.0
+
+            #region License ####################################################
+            # Copyright (c) 2024 Frank Lesniak
+            #
+            # Permission is hereby granted, free of charge, to any person obtaining
+            # a copy of this software and associated documentation files (the
+            # "Software"), to deal in the Software without restriction, including
+            # without limitation the rights to use, copy, modify, merge, publish,
+            # distribute, sublicense, and/or sell copies of the Software, and to
+            # permit persons to whom the Software is furnished to do so, subject to
+            # the following conditions:
+            #
+            # The above copyright notice and this permission notice shall be
+            # included in all copies or substantial portions of the Software.
+            #
+            # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+            # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+            # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+            # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+            # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+            # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+            # SOFTWARE.
+            #endregion License ####################################################
+
+            if ($Error.Count -gt 0) {
+                return ([ref]($Error[0]))
+            } else {
+                return ([ref]$null)
+            }
+        }
+
+        function Test-ErrorOccurred {
+            # .SYNOPSIS
+            # Checks to see if an error occurred during a time period, i.e., during
+            # the execution of a command.
+            #
+            # .DESCRIPTION
+            # Using two references (memory pointers) to errors, this function
+            # checks to see if an error occurred based on differences between the
+            # two errors.
+            #
+            # To use this function, you must first retrieve a reference to the last
+            # error that occurred prior to the command you are about to run. Then,
+            # run the command. After the command completes, retrieve a reference to
+            # the last error that occurred. Pass these two references to this
+            # function to determine if an error occurred.
+            #
+            # .PARAMETER ReferenceToEarlierError
+            # This parameter is required; it is a reference (memory pointer) to a
+            # System.Management.Automation.ErrorRecord that represents the newest
+            # error on the stack earlier in time, i.e., prior to running the
+            # command for which you wish to determine whether an error occurred.
+            #
+            # If no error was on the stack at this time, ReferenceToEarlierError
+            # must be a reference to $null ([ref]$null).
+            #
+            # .PARAMETER ReferenceToLaterError
+            # This parameter is required; it is a reference (memory pointer) to a
+            # System.Management.Automation.ErrorRecord that represents the newest
+            # error on the stack later in time, i.e., after to running the command
+            # for which you wish to determine whether an error occurred.
+            #
+            # If no error was on the stack at this time, ReferenceToLaterError
+            # must be a reference to $null ([ref]$null).
+            #
+            # .EXAMPLE
+            # # Intentionally empty trap statement to prevent terminating errors
+            # # from halting processing
+            # trap { }
+            #
+            # # Retrieve the newest error on the stack prior to doing work
+            # if ($Error.Count -gt 0) {
+            #     $refLastKnownError = ([ref]($Error[0]))
+            # } else {
+            #     $refLastKnownError = ([ref]$null)
+            # }
+            #
+            # # Store current error preference; we will restore it after we do some
+            # # work:
+            # $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+            #
+            # # Set ErrorActionPreference to SilentlyContinue; this will suppress
+            # # error output. Terminating errors will not output anything, kick to
+            # # the empty trap statement and then continue on. Likewise, non-
+            # # terminating errors will also not output anything, but they do not
+            # # kick to the trap statement; they simply continue on.
+            # $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+            #
+            # # Do something that might trigger an error
+            # Get-Item -Path 'C:\MayNotExist.txt'
+            #
+            # # Restore the former error preference
+            # $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+            #
+            # # Retrieve the newest error on the error stack
+            # if ($Error.Count -gt 0) {
+            #     $refNewestCurrentError = ([ref]($Error[0]))
+            # } else {
+            #     $refNewestCurrentError = ([ref]$null)
+            # }
+            #
+            # if (Test-ErrorOccurred -ReferenceToEarlierError $refLastKnownError -ReferenceToLaterError $refNewestCurrentError) {
+            #     # Error occurred
+            # } else {
+            #     # No error occurred
+            # }
+            #
+            # .INPUTS
+            # None. You can't pipe objects to Test-ErrorOccurred.
+            #
+            # .OUTPUTS
+            # System.Boolean. Test-ErrorOccurred returns a boolean value indicating
+            # whether an error occurred during the time period in question. $true
+            # indicates an error occurred; $false indicates no error occurred.
+            #
+            # .NOTES
+            # This function also supports the use of positional parameters instead
+            # of named parameters. If positional parameters are used intead of
+            # named parameters, then two positional parameters are required:
+            #
+            # The first positional parameter is a reference (memory pointer) to a
+            # System.Management.Automation.ErrorRecord that represents the newest
+            # error on the stack earlier in time, i.e., prior to running the
+            # command for which you wish to determine whether an error occurred. If
+            # no error was on the stack at this time, the first positional
+            # parameter must be a reference to $null ([ref]$null).
+            #
+            # The second positional parameter is a reference (memory pointer) to a
+            # System.Management.Automation.ErrorRecord that represents the newest
+            # error on the stack later in time, i.e., after to running the command
+            # for which you wish to determine whether an error occurred. If no
+            # error was on the stack at this time, ReferenceToLaterError must be
+            # a reference to $null ([ref]$null).
+            #
+            # Version: 2.0.20241223.0
+
+            #region License ####################################################
+            # Copyright (c) 2024 Frank Lesniak
+            #
+            # Permission is hereby granted, free of charge, to any person obtaining
+            # a copy of this software and associated documentation files (the
+            # "Software"), to deal in the Software without restriction, including
+            # without limitation the rights to use, copy, modify, merge, publish,
+            # distribute, sublicense, and/or sell copies of the Software, and to
+            # permit persons to whom the Software is furnished to do so, subject to
+            # the following conditions:
+            #
+            # The above copyright notice and this permission notice shall be
+            # included in all copies or substantial portions of the Software.
+            #
+            # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+            # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+            # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+            # NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+            # BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+            # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+            # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+            # SOFTWARE.
+            #endregion License ####################################################
+            param (
+                [ref]$ReferenceToEarlierError = ([ref]$null),
+                [ref]$ReferenceToLaterError = ([ref]$null)
+            )
+
+            # TODO: Validate input
+
+            $boolErrorOccurred = $false
+            if (($null -ne $ReferenceToEarlierError.Value) -and ($null -ne $ReferenceToLaterError.Value)) {
+                # Both not $null
+                if (($ReferenceToEarlierError.Value) -ne ($ReferenceToLaterError.Value)) {
+                    $boolErrorOccurred = $true
+                }
+            } else {
+                # One is $null, or both are $null
+                # NOTE: $ReferenceToEarlierError could be non-null, while
+                # $ReferenceToLaterError could be null if $error was cleared; this
+                # does not indicate an error.
+                # So:
+                # - If both are null, no error
+                # - If $ReferenceToEarlierError is null and $ReferenceToLaterError
+                #   is non-null, error
+                # - If $ReferenceToEarlierError is non-null and
+                #   $ReferenceToLaterError is null, no error
+                if (($null -eq $ReferenceToEarlierError.Value) -and ($null -ne $ReferenceToLaterError.Value)) {
+                    $boolErrorOccurred = $true
+                }
+            }
+
+            return $boolErrorOccurred
+        }
+        #endregion FunctionsToSupportErrorHandling ####################################
+
+        trap {
+            # Intentionally left empty to prevent terminating errors from halting
+            # processing
+        }
+
+        # TODO: Validate input
+
+        # Retrieve the newest error on the stack prior to doing work
+        $refLastKnownError = Get-ReferenceToLastError
+
+        # Store current error preference; we will restore it after we do the work of
+        # this function
+        $actionPreferenceFormerErrorPreference = $global:ErrorActionPreference
+
+        # Set ErrorActionPreference to SilentlyContinue; this will suppress error
+        # output. Terminating errors will not output anything, kick to the empty trap
+        # statement and then continue on. Likewise, non-terminating errors will also
+        # not output anything, but they do not kick to the trap statement; they simply
+        # continue on.
+        $global:ErrorActionPreference = [System.Management.Automation.ActionPreference]::SilentlyContinue
+
+        # Add the access rule/access control entry to the list
+        ($ReferenceToAccessControlListObject.Value).AddAccessRule($ReferenceToAccessRuleObject.Value)
+
+        # Restore the former error preference
+        $global:ErrorActionPreference = $actionPreferenceFormerErrorPreference
+
+        # Retrieve the newest error on the error stack
+        $refNewestCurrentError = Get-ReferenceToLastError
+
+        if (Test-ErrorOccurred -ReferenceToEarlierError $refLastKnownError -ReferenceToLaterError $refNewestCurrentError) {
+            # Error occurred
+            if ($CurrentAttemptNumber -lt $MaxAttempts) {
+                Start-Sleep -Seconds ([math]::Pow(2, $CurrentAttemptNumber))
+
+                $objResultIndicator = Add-AccessRuleRobust -CurrentAttemptNumber ($CurrentAttemptNumber + 1) -MaxAttempts $MaxAttempts -ReferenceToAccessControlListObject $ReferenceToAccessControlListObject -ReferenceToAccessRuleObject $ReferenceToAccessRuleObject
+                return $objResultIndicator
+            } else {
+                # Number of attempts exceeded maximum; return failure indicator:
+                return $false
+            }
+        } else {
+            # No error occurred; return success indicator:
+            return $true
+        }
+    }
+
     function Remove-SpecificAccessRuleRobust {
         # .SYNOPSIS
         # Removes an access rule from an object.
@@ -8019,6 +8465,54 @@ function Repair-NTFSPermissionsRecursively {
         # write the ACL back later.
         $boolACLChangeMade = $false
 
+        #region Initialize action tags for each type of ACE ########################
+        if ($objThis.PSIsContainer) {
+            if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                #region This object is a folder and either it is not inheriting any permissions, or we are at the root of the process
+                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $true
+                $boolSYSTEMInheritableACENeedsToBeApplied = $true
+
+                if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                    # An additional administrator account/group is specified
+                    $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $true
+                } else {
+                    # An additional administrator account/group is not specified
+                    $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                }
+                $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+
+                if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                    # An additional read-only account/group is specified
+                    $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $true
+                } else {
+                    # An additional read-only account/group is not specified
+                    $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+                }
+                $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                #endregion This object is a folder and either it is not inheriting any permissions, or we are at the root of the process
+            } else {
+                #region This object is a folder that is inheriting permissions and we are not at the root of the process
+                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                $boolSYSTEMInheritableACENeedsToBeApplied = $false
+                $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+                $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+                $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                #endregion This object is a folder that is inheriting permissions and we are not at the root of the process
+            }
+        } else {
+            #region This object is a file
+            $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+            $boolSYSTEMInheritableACENeedsToBeApplied = $false
+            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+            $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $true
+            $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+            $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $true
+            #endregion This object is a file
+        }
+        #endregion Initialize action tags for each type of ACE ########################
+
+        #region Look for ACEs that need to be removed, or that already exist (and don't need to be added)
         for ($intCounterA = 0; $intCounterA -lt $intNumberOfItems; $intCounterA++) {
             #region Looping through each ACE in the ACL ############################
             if (($arrWorkingACEs[$intCounterA]).IsInherited -eq $false) {
@@ -8030,11 +8524,11 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 Write-Verbose -Message $strMessage
                 if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
-                    #region ACE has an IdentityReference ###########################
+                    #region Non-inherited ACE has an IdentityReference #############
                     if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
-                        #region ACE is a SID #######################################
+                        #region Non-inherited ACE is a SID #########################
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
-                            #region Function is set to remove unresolved SIDs ######
+                            #region Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
                                 if ($WorkingPath -ne $refToRealPath.Value) {
                                     $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
@@ -8043,7 +8537,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                                 Write-Warning -Message $strMessage
                             } else {
-                                #region The SID is not a protected SID (meaning: it should be removed)
+                                #region Non-inherited ACE is a SID, the function is configured to remove unresolved SIDs, and we confirmed that this SID is not on the protected list - so we will remove it
                                 if ($arrACETracking[$intCounterA] -eq $true) {
                                     if ($WorkingPath -ne $refToRealPath.Value) {
                                         $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
@@ -8081,15 +8575,15 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                     #endregion Access rule removal was successful #####
                                 }
-                                #endregion The SID is not a protected SID (meaning: it should be removed)
+                                #endregion Non-inherited ACE is a SID, the function is configured to remove unresolved SIDs, and we confirmed that this SID is not on the protected list - so we will remove it
                             }
-                            #endregion Function is set to remove unresolved SIDs ######
+                            #endregion Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
                         }
-                        #endregion ACE is a SID #######################################
+                        #endregion Non-inherited ACE is a SID #########################
                     } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
-                        #region ACE is a SID (string) ##############################
+                        #region Non-inherited ACE is a SID (string) ################
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
-                            #region Function is set to remove unresolved SIDs ##
+                            #region Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
                             if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
                                 if ($WorkingPath -ne $refToRealPath.Value) {
                                     $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
@@ -8098,7 +8592,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                                 Write-Warning -Message $strMessage
                             } else {
-                                #region The SID is not a protected SID (meaning: it should be removed)
+                                #region Non-inherited ACE Is a SID, the function is set to remove unresolved SIDs, and the SID is not on the protected SID list - so we will remove it
                                 if ($arrACETracking[$intCounterA] -eq $true) {
                                     if ($WorkingPath -ne $refToRealPath.Value) {
                                         $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
@@ -8142,95 +8636,1129 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                     #endregion Access rule removal was successful #
                                 }
-                                #endregion The SID is not a protected SID (meaning: it should be removed)
+                                #endregion Non-inherited ACE Is a SID, the function is set to remove unresolved SIDs, and the SID is not on the protected SID list - so we will remove it
                             }
-                            #endregion Function is set to remove unresolved SIDs ##
+                            #endregion Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
                         }
-                        #endregion ACE is a SID (string) ##############################
+                        #endregion Non-inherited ACE is a SID (string) ################
                     } else {
-                        #region ACE is presumably an NTAccount #####################
+                        #region Non-inherited ACE is presumably an NTAccount #######
                         # See:
                         # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
 
-                        # TODO: Add code to look for BUILTIN\Administrators and
-                        # NT AUTHORITY\SYSTEM with container inherit and object inherit
-                        # in situations where inheritance is broken on an object or the
-                        # recursion depth is 0
-                        #endregion ACE is presumably an NTAccount #####################
+                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+                            #region Found a non-inherited ACE for the Built-In Administrators group
+                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                #region Found a non-inherited deny ACE for the built-in Administrators group
+                                if ($arrACETracking[$intCounterA] -eq $true) {
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                    } else {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                }
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                } else {
+                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                }
+                                Write-Verbose -Message $strMessage
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                if ($boolSuccess -eq $false) {
+                                    #region Access rule removal failed #############
+                                    Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                    #endregion Access rule removal failed #############
+                                } else {
+                                    #region Access rule removal was successful #####
+                                    $arrACETracking[$intCounterA] = $true
+                                    # Test to see if permissions were removed by comparing the ACE count
+                                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                        #region Permissions confirmed removed based on change in ACE count
+                                        Write-Verbose ('...the deny permission was removed...')
+                                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                                        $boolACLChangeMade = $true
+                                        #endregion Permissions confirmed removed based on change in ACE count
+                                    } else {
+                                        #region Based on no change in ACE count, permissions were not removed
+                                        Write-Verbose ('...the deny permission was not removed...')
+                                        #endregion Based on no change in ACE count, permissions were not removed
+                                    }
+                                    #endregion Access rule removal was successful #####
+                                }
+                                #endregion Found a non-inherited deny ACE for the built-in Administrators group
+                            } else {
+                                #region Found a non-inherited allow ACE for the built-in Administrators group
+
+                                # We are not worried about built-in Administrators
+                                # group permissions on individual files because we've
+                                # already gone through and fixed them
+                                if ($objThis.PSIsContainer) {
+                                    #region Found a non-inherited allow ACE for the built-in Administrators group on a folder object
+
+                                    # For built-in administrators/SYSTEM, we only need
+                                    # to examine ACEs again when no permissions are
+                                    # inherited on this object, or when we are at the
+                                    # root of the process. This is because our only
+                                    # interest at the moment is determining if we need
+                                    # to apply an inheritable ACE to this object, and
+                                    # it's because we've already reviewed permissions
+                                    # on a per-item basis
+                                    if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                        #region Found a non-inherited allow ACE for the built-in Administrators group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        } else {
+                                            # See if the FileSystemRights is an integer value that
+                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+                                        }
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region Found a non-inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
+                                            # Check inheritable ACE settings
+                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                            }
+                                            #endregion Found a non-inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
+                                        }
+                                        #endregion Found a non-inherited allow ACE for the built-in Administrators group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                    }
+                                    # We don't care about file objects because they
+                                    # have already been addressed; see comment above
+                                    # the region start
+                                    #endregion Found a non-inherited allow ACE for the built-in Administrators group on a folder object
+                                }
+                                #endregion Found a non-inherited allow ACE for the built-in Administrators group
+                            }
+                            #endregion Found a non-inherited ACE for the Built-In Administrators group
+                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                            #region Found a non-inherited ACE for the SYSTEM account
+                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                #region Found a non-inherited deny ACE for the SYSTEM account
+                                if ($arrACETracking[$intCounterA] -eq $true) {
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                    } else {
+                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                }
+                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                } else {
+                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                }
+                                Write-Verbose -Message $strMessage
+                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                if ($boolSuccess -eq $false) {
+                                    #region Access rule removal failed #############
+                                    Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                    #endregion Access rule removal failed #############
+                                } else {
+                                    #region Access rule removal was successful #####
+                                    $arrACETracking[$intCounterA] = $true
+                                    # Test to see if permissions were removed by comparing the ACE count
+                                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                        #region Permissions confirmed removed based on change in ACE count
+                                        Write-Verbose ('...the deny permission was removed...')
+                                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                                        $boolACLChangeMade = $true
+                                        #endregion Permissions confirmed removed based on change in ACE count
+                                    } else {
+                                        #region Based on no change in ACE count, permissions were not removed
+                                        Write-Verbose ('...the deny permission was not removed...')
+                                        #endregion Based on no change in ACE count, permissions were not removed
+                                    }
+                                    #endregion Access rule removal was successful #####
+                                }
+                                #endregion Found a non-inherited deny ACE for the SYSTEM account
+                            } else {
+                                #region Found a non-inherited allow ACE for the SYSTEM account
+
+                                # We are not worried about the SYSTEM account
+                                # permissions on individual files because we've already
+                                # gone through and fixed them
+                                if ($objThis.PSIsContainer) {
+                                    #region Found a non-inherited allow ACE for the SYSTEM account on a folder object
+
+                                    # For built-in administrators/SYSTEM, we only need
+                                    # to examine ACEs again when no permissions are
+                                    # inherited on this object, or when we are at the
+                                    # root of the process. This is because our only
+                                    # interest at the moment is determining if we need
+                                    # to apply an inheritable ACE to this object, and
+                                    # it's because we've already reviewed permissions
+                                    # on a per-item basis
+                                    if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                        #region Found a non-inherited allow ACE for the SYSTEM account on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        } else {
+                                            # See if the FileSystemRights is an integer value that
+                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+                                        }
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region Found a non-inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
+                                            # Check inheritable ACE settings
+                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                $boolSYSTEMInheritableACENeedsToBeApplied = $false
+                                            }
+                                            #endregion Found a non-inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
+                                        }
+                                        #endregion Found a non-inherited allow ACE for the SYSTEM account on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                    }
+                                    # We don't care about file objects because they
+                                    # have already been addressed; see comment above
+                                    # the region start
+                                    #endregion Found a non-inherited allow ACE for the SYSTEM account on a folder object
+                                }
+                                #endregion Found a non-inherited allow ACE for the SYSTEM account
+                            }
+                            #endregion Found a non-inherited ACE for the SYSTEM account
+                        } else {
+                            # check additional accounts
+                            $boolFoundGroup = $false
+
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                    #region We're working on a non-inherited ACE and an additional administrator account/group is specified
+                                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
+                                        #region Found a non-inherited ACE for the additional administrator account/group
+                                        $boolFoundGroup = $true
+                                        if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                            #region Found a non-inherited deny ACE for the additional administrator account/group
+                                            if ($arrACETracking[$intCounterA] -eq $true) {
+                                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                                    $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                                } else {
+                                                    $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                                }
+                                                Write-Warning -Message $strMessage
+                                            }
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                            } else {
+                                                $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                            }
+                                            Write-Verbose -Message $strMessage
+                                            $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                            if ($boolSuccess -eq $false) {
+                                                #region Access rule removal failed #############
+                                                Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                                #endregion Access rule removal failed #############
+                                            } else {
+                                                #region Access rule removal was successful #####
+                                                $arrACETracking[$intCounterA] = $true
+                                                # Test to see if permissions were removed by comparing the ACE count
+                                                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                                                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                                    #region Permissions confirmed removed based on change in ACE count
+                                                    Write-Verbose ('...the deny permission was removed...')
+                                                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                                                    $boolACLChangeMade = $true
+                                                    #endregion Permissions confirmed removed based on change in ACE count
+                                                } else {
+                                                    #region Based on no change in ACE count, permissions were not removed
+                                                    Write-Verbose ('...the deny permission was not removed...')
+                                                    #endregion Based on no change in ACE count, permissions were not removed
+                                                }
+                                                #endregion Access rule removal was successful #####
+                                            }
+                                            #endregion Found a non-inherited deny ACE for the additional administrator account/group
+                                        } else {
+                                            #region Found a non-inherited allow ACE for the additional administrator account/group
+                                            if ($objThis.PSIsContainer) {
+                                                #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object
+                                                if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                                    #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    } else {
+                                                        # See if the FileSystemRights is an integer value that
+                                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                        }
+                                                    }
+                                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                        #region Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group, and either no permissions on this object are inherited, or we're at the root of the process
+                                                        # Check inheritable ACE settings
+                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                        }
+                                                        #endregion Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group, and either no permissions on this object are inherited, or we're at the root of the process
+                                                    }
+                                                    #endregion Found a non-inherited allow ACE for the additional administrator account/group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
+                                                } else {
+                                                    #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object with inherited permissions that is not at the root of the process
+                                                    # We don't care about folder
+                                                    # objects where the permissions on
+                                                    # the folder are inherited and
+                                                    # we're not at the root of the
+                                                    # process; as we continue to work
+                                                    # upstream (through parent
+                                                    # folders), this object will get
+                                                    # the required account permission
+                                                    # assigned
+                                                    #endregion Found a non-inherited allow ACE for the additional administrator account/group on a folder object with inherited permissions that is not at the root of the process
+                                                }
+                                                #endregion Found a non-inherited allow ACE for the additional administrator account/group on a folder object
+                                            } else {
+                                                #region Found a non-inherited allow ACE for the additional administrator account/group on a file object
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                                if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                } else {
+                                                    # See if the FileSystemRights is an integer value that
+                                                    # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                    $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                    if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                        $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                    }
+                                                }
+                                                if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    #region Found a non-inherited allow ACE on a file object that grants full control to the additional administrator account/group
+                                                    $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+                                                    #endregion Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                }
+                                                #endregion Found a non-inherited allow ACE for the additional administrator account/group on a file object
+                                            }
+                                            #endregion Found a non-inherited allow ACE for the additional administrator account/group
+                                        }
+                                        #endregion Found a non-inherited ACE for the additional administrator account/group
+                                    }
+                                    #endregion We're working on a non-inherited ACE and an additional administrator account/group is specified
+                                }
+                            }
+
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                    #region We're working on a non-inherited ACE and an additional read-only account/group is specified
+                                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
+                                        #region Found a non-inherited ACE for the additional read-only account/group
+                                        $boolFoundGroup = $true
+
+                                        #region Check for minimum-required level of permissions
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        $intPermissionsThatExceedRequiredAmountOfPermissions = 0
+                                        # Check for read & execute permissions:
+
+                                        # There are three ways to have this. The
+                                        # first is
+                                        # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                        #
+                                        # The second is
+                                        # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                        # +
+                                        # [System.Security.AccessControl.FileSystemRights]::Synchronize)
+                                        #
+                                        # The third is to have
+                                        # GENERIC_EXECUTE (536870912 or
+                                        # 0x20000000) + GENERIC_READ
+                                        # (-2147483648 or 0x80000000)
+                                        #
+                                        # First, check for GENERIC_ALL
+                                        # (268435456 or 0x1000000), which is
+                                        # not part of
+                                        # [System.Security.AccessControl.FileSystemRights]
+                                        $intFileSystemRights = 268435456
+                                        if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                            #region GENERIC_ALL permission found
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            # In this case, the permissions that
+                                            # exceed (GENERIC_EXECUTE +
+                                            # GENERIC_READ) are GENERIC_WRITE
+                                            # (1073741824 or 0x40000000)
+                                            #
+                                            # But we should check for any other
+                                            # permissions first:
+                                            $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                                            # First calculate any permissions in
+                                            # excess of ReadAndExecute +
+                                            # Synchronize:
+                                            $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                            # Add GENERIC_WRITE:
+                                            $intPermissionsThatExceedRequiredAmountOfPermissions += 1073741824
+                                            #endregion GENERIC_ALL permission found
+                                        } else {
+                                            #region No GENERIC_ALL permission found
+                                            # Try plain ol' ReadAndExecute
+                                            # first
+                                            $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                            if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+
+                                            # Try ReadAndExecute + Synchronize
+                                            # next
+                                            if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                                                if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                }
+                                            }
+
+                                            # Try GENERIC_EXECUTE (536870912 or
+                                            # 0x20000000) and GENERIC_READ
+                                            # (-2147483648 or 0x80000000) next
+                                            if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                $intFileSystemRights = 536870912 + -2147483648
+                                                if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                }
+                                            }
+
+                                            # Next, regardless of how read &
+                                            # execute permissions were applied, we
+                                            # need to calculate whether any
+                                            # permissions are in excess of read &
+                                            # execute:
+                                            if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                # Calculate permissions that are in excess of read and execute:
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize -bor 536870912 -bor -2147483648
+                                                $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                            }
+                                            #endregion No GENERIC_ALL permission found
+                                        }
+                                        #endregion Check for minimum-required level of permissions
+
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region Found a non-inherited ACE with at least read & execute permissions for the additional read-only account/group
+                                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                                #region Found a non-inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                                if ($arrACETracking[$intCounterA] -eq $true) {
+                                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that was already been used in an operation.'
+                                                    } else {
+                                                        $strMessage = 'Removing ACE from path "' + $WorkingPath + '" that was already been used in an operation.'
+                                                    }
+                                                    Write-Warning -Message $strMessage
+                                                }
+                                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                                } else {
+                                                    $strMessage = 'Removing deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
+                                                }
+                                                Write-Verbose -Message $strMessage
+                                                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
+                                                if ($boolSuccess -eq $false) {
+                                                    #region Access rule removal failed #############
+                                                    Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                                    #endregion Access rule removal failed #############
+                                                } else {
+                                                    #region Access rule removal was successful #####
+                                                    $arrACETracking[$intCounterA] = $true
+                                                    # Test to see if permissions were removed by comparing the ACE count
+                                                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                                                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                                                        #region Permissions confirmed removed based on change in ACE count
+                                                        Write-Verbose ('...the deny permission was removed...')
+                                                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                                                        $boolACLChangeMade = $true
+                                                        #endregion Permissions confirmed removed based on change in ACE count
+                                                    } else {
+                                                        #region Based on no change in ACE count, permissions were not removed
+                                                        Write-Verbose ('...the deny permission was not removed...')
+                                                        #endregion Based on no change in ACE count, permissions were not removed
+                                                    }
+                                                    #endregion Access rule removal was successful #####
+                                                }
+                                                #endregion Found a non-inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                            } else {
+                                                #region Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                                # Does it have excess permissions?
+                                                # If so, write a warning.
+                                                if ($intPermissionsThatExceedRequiredAmountOfPermissions -ne 0) {
+                                                    #region Found a non-inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
+                                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                                        $strMessage = 'An ACE was found at the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that grants more permissions than necessary to the account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '". The permissions that exceed Read & Execute are: ' + $intPermissionsThatExceedRequiredAmountOfPermissions
+                                                    } else {
+                                                        $strMessage = 'An ACE was found at the path "' + $WorkingPath + '" that grants more permissions than necessary to the account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '". The permissions that exceed Read & Execute are: ' + $intPermissionsThatExceedRequiredAmountOfPermissions
+                                                    }
+                                                    Write-Warning -Message $strMessage
+                                                    #endregion Found a non-inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
+                                                }
+
+                                                # Check to see if the folder/file
+                                                # has inheritance broken (across
+                                                # all ACEs, not just this one) - or
+                                                # check to see if we are at the
+                                                # root of the process
+                                                if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                                    #region Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    if ($objThis.PSIsContainer) {
+                                                        #region Found a non-inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                        # Check inheritable ACE
+                                                        # settings
+                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                            $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+                                                        }
+                                                        #endregion Found a non-inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    } else {
+                                                        #region Found a non-inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                        $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                                                        #endregion Found a non-inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    }
+                                                    #endregion Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                }
+                                                #endregion Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                            }
+                                            #endregion Found a non-inherited ACE with at least read & execute permissions for the additional read-only account/group
+                                        }
+                                        #endregion Found a non-inherited ACE for the additional read-only account/group
+                                    }
+                                    #endregion We're working on a non-inherited ACE and an additional read-only account/group is specified
+                                }
+                            }
+                        }
+                        #endregion Non-inherited ACE is presumably an NTAccount #######
                     }
-                    #endregion ACE has an IdentityReference ###########################
+                    #endregion Non-inherited ACE has an IdentityReference #############
                 }
                 #endregion Current ACE is not inherited ###############################
             } else {
                 #region Current ACE is inherited ###################################
-                if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
-                    #region ACE has an IdentityReference ###########################
-                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
-                        #region ACE is a SID #######################################
-                        if ($boolRemoveUnresolvedSIDs -eq $true) {
-                            #region Function is set to remove unresolved SIDs ######
-                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                if ($WorkingPath -ne $refToRealPath.Value) {
-                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                if ($RecursionDepth -eq 0) {
+                    #region Current ACE is inherited and we are at the root of the process
+                    # This is the only circumstance where we care about inherited ACEs
+
+                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                        #region At the root of the process; inherited ACE has an IdentityReference
+                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                            #region At the root of the process; inherited ACE is a SID
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                #region At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
+                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                    } else {
+                                        $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                    }
+                                    Write-Warning -Message $strMessage
                                 } else {
-                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                    #region At the root of the process; inherited ACE is a SID, the function is configured to remove unresolved SIDs, and we confirmed that this SID is not on the protected list - so we would theoretically want to remove it
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Unresolved SID ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' found at the root path of the permission repair process cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the unresolved SID. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                    } else {
+                                        $strMessage = 'Unresolved SID ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' found at the root path of the permission repair process cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the unresolved SID. Root path is "' + $WorkingPath + '".'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                    #endregion At the root of the process; inherited ACE is a SID, the function is configured to remove unresolved SIDs, and we confirmed that this SID is not on the protected list - so we would theoretically want to remove it
                                 }
-                                Write-Warning -Message $strMessage
-                            } else {
-                                # Not a protected SID
-                                if ($WorkingPath -ne $refToRealPath.Value) {
-                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '"). However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
-                                } else {
-                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
-                                }
-                                Write-Warning -Message $strMessage
+                                #endregion At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
                             }
-                            #endregion Function is set to remove unresolved SIDs ######
-                        }
-                        #endregion ACE is a SID #######################################
-                    } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
-                        #region ACE is a SID (string) ##############################
-                        if ($boolRemoveUnresolvedSIDs -eq $true) {
-                            #region Function is set to remove unresolved SIDs ######
-                            if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
-                                if ($WorkingPath -ne $refToRealPath.Value) {
-                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                            #endregion At the root of the process; inherited ACE is a SID
+                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
+                            #region At the root of the process; inherited ACE is a SID (string)
+                            if ($boolRemoveUnresolvedSIDs -eq $true) {
+                                #region At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
+                                if (($ReferenceToHashtableOfKnownSIDs.Value).ContainsKey(($arrWorkingACEs[$intCounterA]).IdentityReference.Value) -eq $true) {
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") because it is associated with a known SID. Is the connection to the domain down?'
+                                    } else {
+                                        $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                    }
+                                    Write-Warning -Message $strMessage
                                 } else {
-                                    $strMessage = '...not removing SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '" because it is associated with a known SID. Is the connection to the domain down?'
+                                    #region At the root of the process; inherited ACE Is a SID, the function is set to remove unresolved SIDs, and the SID is not on the protected SID list - so we would theoretically want to remove it
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Unresolved SID ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' found at the root path of the permission repair process cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the unresolved SID. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                    } else {
+                                        $strMessage = 'Unresolved SID ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' found at the root path of the permission repair process cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the unresolved SID. Root path is "' + $WorkingPath + '".'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                    #endregion At the root of the process; inherited ACE Is a SID, the function is set to remove unresolved SIDs, and the SID is not on the protected SID list - so we would theoretically want to remove it
                                 }
-                                Write-Warning -Message $strMessage
-                            } else {
-                                #region The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
-                                # TODO: Display this warning only if the recursion
-                                # depth is 0
-                                if ($WorkingPath -ne $refToRealPath.Value) {
-                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + ' (real path: "' + $refToRealPath.Value + '"). However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
-                                } else {
-                                    $strMessage = 'An unresolved SID was found at the path ' + $WorkingPath + '. However, it is inherited and therefore will not be removed. Please remove it from the parent folder.'
-                                }
-                                Write-Warning -Message $strMessage
-                                #endregion The SID is not a protected SID (meaning: it theoretically should be removed, but it's inherited)
+                                #endregion At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
                             }
-                            #endregion Function is set to remove unresolved SIDs ######
+                            #endregion At the root of the process; inherited ACE is a SID (string)
+                        } else {
+                            #region At the root of the process; inherited ACE is presumably an NTAccount #######
+                            # See:
+                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+
+                            if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+                                #region At the root of the process, found an inherited ACE for the built-in Administrators group
+                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                    #region At the root of the process, found an inherited deny ACE for the built-in Administrators group
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                    } else {
+                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '".'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                    #endregion At the root of the process, found an inherited deny ACE for the built-in Administrators group
+                                } else {
+                                    #region At the root of the process, found an inherited allow ACE for the built-in Administrators group
+
+                                    # We are not worried about built-in Administrators
+                                    # group permissions on individual files because we've
+                                    # already gone through and fixed them
+                                    if ($objThis.PSIsContainer) {
+                                        #region At the root of the process, found an inherited allow ACE for the built-in Administrators group on a folder object
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        } else {
+                                            # See if the FileSystemRights is an integer value that
+                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+                                        }
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
+                                            # Check inheritable ACE settings
+                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                            }
+                                            #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
+                                        }
+                                        # We don't care about file objects because they
+                                        # have already been addressed; see comment above
+                                        # the region start
+                                        #endregion At the root of the process, found an inherited allow ACE for the built-in Administrators group on a folder object
+                                    }
+                                    #endregion At the root of the process, found an inherited allow ACE for the built-in Administrators group
+                                }
+                                #endregion At the root of the process, found an inherited ACE for the built-in Administrators group
+                            } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                                #region At the root of the process, found an inherited ACE for the SYSTEM account
+                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                    #region At the root of the process, found an inherited deny ACE for the SYSTEM account
+                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                    } else {
+                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '".'
+                                    }
+                                    Write-Warning -Message $strMessage
+                                    #endregion At the root of the process, found an inherited deny ACE for the SYSTEM account
+                                } else {
+                                    #region At the root of the process, found an inherited allow ACE for the SYSTEM account
+
+                                    # We are not worried about the SYSTEM account
+                                    # permissions on individual files because we've
+                                    # already gone through and fixed them
+                                    if ($objThis.PSIsContainer) {
+                                        #region At the root of the process, found an inherited allow ACE for the SYSTEM account on a folder object
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        } else {
+                                            # See if the FileSystemRights is an integer value that
+                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+                                        }
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
+                                            # Check inheritable ACE settings
+                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                            }
+                                            #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
+                                        }
+                                        # We don't care about file objects because they
+                                        # have already been addressed; see comment above
+                                        # the region start
+                                        #endregion At the root of the process, found an inherited allow ACE for the SYSTEM account on a folder object
+                                    }
+                                    #endregion At the root of the process, found an inherited allow ACE for the SYSTEM account
+                                }
+                                #endregion At the root of the process, found an inherited ACE for the SYSTEM account
+                            } else {
+                                # check additional accounts
+                                $boolFoundGroup = $false
+
+                                if ($boolFoundGroup -eq $false) {
+                                    if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                        #region At the root of the process, we're working on an inherited ACE and an additional administrator account/group is specified
+                                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
+                                            #region At the root of the process, we found an inherited ACE for the additional administrator account/group
+                                            $boolFoundGroup = $true
+                                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                                #region At the root of the process, found an inherited deny ACE for the additional administrator account/group
+                                                if ($WorkingPath -ne $refToRealPath.Value) {
+                                                    $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                                } else {
+                                                    $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '".'
+                                                }
+                                                Write-Warning -Message $strMessage
+                                                #endregion At the root of the process, found an inherited deny ACE for the additional administrator account/group
+                                            } else {
+                                                #region At the root of the process, found an inherited allow ACE for the additional administrator account/group
+                                                if ($objThis.PSIsContainer) {
+                                                    #region At the root of the process, found an inherited allow ACE for the additional administrator account/group on a folder object
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    } else {
+                                                        # See if the FileSystemRights is an integer value that
+                                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                        }
+                                                    }
+                                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                        #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                        # Check inheritable ACE settings
+                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                        }
+                                                        #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                    }
+                                                    #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group on a folder object
+                                                } else {
+                                                    #region At the root of the process, found an inherited allow ACE for the additional administrator account/group on a file object
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    } else {
+                                                        # See if the FileSystemRights is an integer value that
+                                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                        }
+                                                    }
+                                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                        #region Found a non-inherited allow ACE on a file object that grants full control to the additional administrator account/group
+                                                        $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+                                                        #endregion Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                    }
+                                                    #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group on a file object
+                                                }
+                                                #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group
+                                            }
+                                            #endregion At the root of the process, we found an inherited ACE for the additional administrator account/group
+                                        }
+                                        #endregion At the root of the process, we're working on an inherited ACE and an additional administrator account/group is specified
+                                    }
+                                }
+
+                                if ($boolFoundGroup -eq $false) {
+                                    if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                        #region At the root of the process, we're working on an inherited ACE and an additional read-only account/group is specified
+                                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
+                                            #region At the root of the process, found an inherited ACE for the additional read-only account/group
+                                            $boolFoundGroup = $true
+
+                                            #region Check for minimum-required level of permissions
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                            $intPermissionsThatExceedRequiredAmountOfPermissions = 0
+                                            # Check for read & execute permissions:
+
+                                            # There are three ways to have this. The
+                                            # first is
+                                            # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                            #
+                                            # The second is
+                                            # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                            # +
+                                            # [System.Security.AccessControl.FileSystemRights]::Synchronize)
+                                            #
+                                            # The third is to have
+                                            # GENERIC_EXECUTE (536870912 or
+                                            # 0x20000000) + GENERIC_READ
+                                            # (-2147483648 or 0x80000000)
+                                            #
+                                            # First, check for GENERIC_ALL
+                                            # (268435456 or 0x1000000), which is
+                                            # not part of
+                                            # [System.Security.AccessControl.FileSystemRights]
+                                            $intFileSystemRights = 268435456
+                                            if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                #region GENERIC_ALL permission found
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                # In this case, the permissions that
+                                                # exceed (GENERIC_EXECUTE +
+                                                # GENERIC_READ) are GENERIC_WRITE
+                                                # (1073741824 or 0x40000000)
+                                                #
+                                                # But we should check for any other
+                                                # permissions first:
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                                                # First calculate any permissions in
+                                                # excess of ReadAndExecute +
+                                                # Synchronize:
+                                                $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                                # Add GENERIC_WRITE:
+                                                $intPermissionsThatExceedRequiredAmountOfPermissions += 1073741824
+                                                #endregion GENERIC_ALL permission found
+                                            } else {
+                                                #region No GENERIC_ALL permission found
+                                                # Try plain ol' ReadAndExecute
+                                                # first
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                                if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                }
+
+                                                # Try ReadAndExecute + Synchronize
+                                                # next
+                                                if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                                                    if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    }
+                                                }
+
+                                                # Try GENERIC_EXECUTE (536870912 or
+                                                # 0x20000000) and GENERIC_READ
+                                                # (-2147483648 or 0x80000000) next
+                                                if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    $intFileSystemRights = 536870912 + -2147483648
+                                                    if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    }
+                                                }
+
+                                                # Next, regardless of how read &
+                                                # execute permissions were applied, we
+                                                # need to calculate whether any
+                                                # permissions are in excess of read &
+                                                # execute:
+                                                if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    # Calculate permissions that are in excess of read and execute:
+                                                    $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize -bor 536870912 -bor -2147483648
+                                                    $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                                }
+                                                #endregion No GENERIC_ALL permission found
+                                            }
+                                            #endregion Check for minimum-required level of permissions
+
+                                            if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                #region At the root of the process, found an inherited ACE with at least read & execute permissions for the additional read-only account/group
+                                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                                    #region At the root of the process, found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                                                    } else {
+                                                        $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '".'
+                                                    }
+                                                    Write-Warning -Message $strMessage
+                                                    #endregion At the root of the process, found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                                } else {
+                                                    #region At the root of the process, found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                                    # Does it have excess permissions?
+                                                    # If so, write a warning.
+                                                    if ($intPermissionsThatExceedRequiredAmountOfPermissions -ne 0) {
+                                                        #region At the root of the process, found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
+                                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                                            $strMessage = 'An ACE was found at the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that grants more permissions than necessary to the account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '". The permissions that exceed Read & Execute are: ' + $intPermissionsThatExceedRequiredAmountOfPermissions
+                                                        } else {
+                                                            $strMessage = 'An ACE was found at the path "' + $WorkingPath + '" that grants more permissions than necessary to the account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '". The permissions that exceed Read & Execute are: ' + $intPermissionsThatExceedRequiredAmountOfPermissions
+                                                        }
+                                                        Write-Warning -Message $strMessage
+                                                        #endregion At the root of the process, found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
+                                                    }
+
+                                                    if ($objThis.PSIsContainer) {
+                                                        #region At the root of the process, found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                        # Check inheritable ACE
+                                                        # settings
+                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                            $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+                                                        }
+                                                        #endregion At the root of the process, found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    } else {
+                                                        #region At the root of the process, found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                        $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                                                        #endregion At the root of the process, found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                    }
+                                                    #endregion At the root of the process, found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                                }
+                                                #endregion At the root of the process, found an inherited ACE with at least read & execute permissions for the additional read-only account/group
+                                            }
+                                            #endregion At the root of the process, found an inherited ACE for the additional read-only account/group
+                                        }
+                                        #endregion At the root of the process, we're working on an inherited ACE and an additional read-only account/group is specified
+                                    }
+                                }
+                            }
+                            #endregion At the root of the process; inherited ACE is presumably an NTAccount #######
                         }
-                        #endregion ACE is a SID (string) ##############################
-                    } else {
-                        #region ACE is presumably an NTAccount #####################
-                        # See:
-                        # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
-                        #endregion ACE is presumably an NTAccount #####################
+                        #endregion At the root of the process; inherited ACE has an IdentityReference
                     }
-                    #endregion ACE has an IdentityReference ###########################
+                    #endregion Current ACE is inherited and we are at the root of the process
                 }
                 #endregion Current ACE is inherited ###################################
             }
             #endregion Looping through each ACE in the ACL ############################
         }
+        #endregion Look for ACEs that need to be removed, or that already exist (and don't need to be added)
 
-        if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
-            #region No permissions are inherited ###################################
-            # TODO: Take action here
-            #endregion No permissions are inherited ###################################
+
+        # TODO: Need to remove this variable: $boolAdditionalAdministratorAccountOrGroupDenyEntryFound
+        # TODO: Need to remove this variable: $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess
+        # TODO: Need to remove this variable: $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound
+        # TODO: Need to remove this variable: $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess
+
+        if ($boolBuiltInAdministratorsInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value
+            #region An inheritable ACE needs to be applied here for the built-in Administrators group
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion An inheritable ACE needs to be applied here for the built-in Administrators group
+        }
+
+        if ($boolSYSTEMInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value
+            #region An inheritable ACE needs to be applied here for the SYSTEM account
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion An inheritable ACE needs to be applied here for the SYSTEM account
+        }
+
+        if ($boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
+            #region An inheritable ACE needs to be applied here for the additional administrator account/group
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion An inheritable ACE needs to be applied here for the additional administrator account/group
+        }
+
+        if ($boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
+            #region A non-inheritable ACE needs to be applied here for the additional administrator account/group
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following file. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following file. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion A non-inheritable ACE needs to be applied here for the additional administrator account/group
+        }
+
+        if ($boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
+            #region An inheritable ACE needs to be applied here for the additional read-only account/group
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion An inheritable ACE needs to be applied here for the additional read-only account/group
+        }
+
+        if ($boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied) {
+            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
+            #region A non-inheritable ACE needs to be applied here for the additional read-only account/group
+            if ($WorkingPath -ne $refToRealPath.Value) {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following file. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+            } else {
+                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following file. The path is "' + $WorkingPath + '".'
+            }
+            Write-Verbose -Message $strMessage
+            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+            if ($boolSuccess -eq $false) {
+                #region Access rule addition failed ################################
+                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                #endregion Access rule addition failed ################################
+            } else {
+                #region Access rule addition was successful #####
+                # Test to see if permissions were added by comparing the ACE count
+                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                    #region Permissions confirmed added based on change in ACE count
+                    Write-Verbose ('...the permission was added...')
+                    $intLastNumberOfItems = $intCurrentNumberOfItems
+                    $boolACLChangeMade = $true
+                    #endregion Permissions confirmed added based on change in ACE count
+                } else {
+                    #region Based on no change in ACE count, permissions were not added
+                    Write-Verbose ('...the permission was not added...')
+                    #endregion Based on no change in ACE count, permissions were not added
+                }
+                #endregion Access rule addition was successful #####
+            }
+            #endregion A non-inheritable ACE needs to be applied here for the additional read-only account/group
         }
 
         if ($boolACLChangeMade -eq $true) {
