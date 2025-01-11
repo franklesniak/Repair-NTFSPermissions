@@ -7317,29 +7317,15 @@ function Repair-NTFSPermissionsRecursively {
                 #endregion The permissions object was not null
             }
 
-            $boolBuiltInAdministratorsDenyEntryFound = $false
             $boolBuiltInAdministratorsHaveSufficientAccess = $false
-            $boolSYSTEMAccountDenyEntryFound = $false
             $boolSYSTEMAccountHasSufficientAccess = $false
-            #TODO: Remove "additional administrator" work from this section
-            $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-            if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-            }
-            $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-            if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-            }
 
             $arrACEs | ForEach-Object {
                 #region Looping through each access control entry (ACE) in the ACL
                 $objThisACE = $_
                 if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
                     #region Found an ACE for the Built-In Administrators group #####
-                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                        $boolBuiltInAdministratorsDenyEntryFound = $true
-                    } else {
-                        # assume 'Allow'
+                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                         if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                             $boolBuiltInAdministratorsHaveSufficientAccess = $true
                         } else {
@@ -7354,10 +7340,7 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Found an ACE for the Built-In Administrators group #####
                 } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
                     #region Found an ACE for the SYSTEM account ####################
-                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                        $boolSYSTEMAccountDenyEntryFound = $true
-                    } else {
-                        # assume 'Allow'
+                    if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                         if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                             $boolSYSTEMAccountHasSufficientAccess = $true
                         } else {
@@ -7370,108 +7353,11 @@ function Repair-NTFSPermissionsRecursively {
                         }
                     }
                     #endregion Found an ACE for the SYSTEM account ####################
-                } else {
-                    # check additional accounts
-                    $boolFoundGroup = $false
-
-                    if ($boolFoundGroup -eq $false) {
-                        if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                            # Check the additional administrator account/group
-                            if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
-                                $boolFoundGroup = $true
-                                if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                    $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
-                                } else {
-                                    # assume 'Allow'
-                                    if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                                    } else {
-                                        # See if the FileSystemRights is an integer value that
-                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                        $intFileSystemRights = [int]($objThisACE.FileSystemRights)
-                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                            $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if ($boolFoundGroup -eq $false) {
-                        if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                            # Check the additional administrator account/group
-                            if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
-                                $boolFoundGroup = $true
-                                if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                    $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
-                                } else {
-                                    # assume 'Allow'
-                                    # TODO: This needs to be fixed to convert ReadAndExecute permissions to a string, then look for the string in the FileSystemRights property, which is a comma-separated list. The read only account could also have elevated permissions (something beyond read and execute), which would also be acceptable
-                                    if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                                    } else {
-                                        # See if the FileSystemRights is an integer value that
-                                        # includes ReadAndExecute (131241) or GENERIC_EXECUTE (536870912)
-                                        # TODO: determine if GENERIC_EXECUTE is the correct value
-                                        $intFileSystemRights = [int]($objThisACE.FileSystemRights)
-                                        if (($intFileSystemRights -band 131241) -eq 131241 -or ($intFileSystemRights -band 536870912) -eq 536870912) {
-                                            $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
                 #endregion Looping through each access control entry (ACE) in the ACL
             }
 
-            if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $true) {
-                $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-            }
-            if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $true) {
-                $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-            }
-
-            if ($boolBuiltInAdministratorsDenyEntryFound) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                } else {
-                    $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                }
-                Write-Warning -Message $strMessage
-                $boolBuiltInAdministratorsHaveSufficientAccess = $false
-            }
-            if ($boolSYSTEMAccountDenyEntryFound) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                } else {
-                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                }
-                Write-Warning -Message $strMessage
-                $boolSYSTEMAccountHasSufficientAccess = $false
-            }
-            if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                } else {
-                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                }
-                Write-Warning -Message $strMessage
-                $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-            }
-            if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                } else {
-                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the folder/file "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                }
-                Write-Warning -Message $strMessage
-                $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-            }
-
-            if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
+            if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false) {
                 $boolPermissionAdjustmentNecessary = $true
                 if ($WorkingPath -ne $refToRealPath.Value) {
                     $strMessage = 'Permission adjustment necessary for "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
@@ -7541,56 +7427,6 @@ function Repair-NTFSPermissionsRecursively {
                 #endregion SYSTEM account does not have sufficient access #############
             }
 
-            if ($boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-                } else {
-                    $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '".'
-                }
-                Write-Verbose -Message $strMessage
-                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
-                # Add ACE for additional administrator
-                $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
-                if ($objThis.PSIsContainer) {
-                    # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(NP)(F)"'
-                } else {
-                    # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(F)"'
-                }
-                if ($IterativeRepairState -le 1) {
-                    $strCommand += ' 2>&1'
-                }
-                $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Verbose ('About to run command: ' + $strCommand)
-                $null = Invoke-Expression $strCommand
-            }
-
-            if ($boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
-                if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-                } else {
-                    $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" does not have sufficient access to the folder/file "' + $WorkingPath + '".'
-                }
-                Write-Verbose -Message $strMessage
-                # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
-                # Add ACE for additional read only account
-                $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
-                if ($objThis.PSIsContainer) {
-                    # Is a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(NP)(RX)"'
-                } else {
-                    # Is not a folder
-                    $strCommand = 'C:\Windows\System32\icacls.exe "' + $strEscapedPathForInvokeExpression + '" /grant "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls.Value + ':(RX)"'
-                }
-                if ($IterativeRepairState -le 1) {
-                    $strCommand += ' 2>&1'
-                }
-                $strAllCommandsInThisSection += "`n" + $strCommand
-                Write-Verbose ('About to run command: ' + $strCommand)
-                $null = Invoke-Expression $strCommand
-            }
-
             if ($boolPermissionAdjustmentNecessary) {
                 #region Permissions adjustments were attempted; re-read permissions to verify they are now correct
 
@@ -7640,28 +7476,15 @@ function Repair-NTFSPermissionsRecursively {
                         #endregion The permissions inheritance status was not a boolean value
                     }
 
-                    $boolBuiltInAdministratorsDenyEntryFound = $false
                     $boolBuiltInAdministratorsHaveSufficientAccess = $false
-                    $boolSYSTEMAccountDenyEntryFound = $false
                     $boolSYSTEMAccountHasSufficientAccess = $false
-                    $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $false
-                    if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-                    }
-                    $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $false
-                    if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-                    }
 
                     $arrACEs | ForEach-Object {
                         #region Looping through each access control entry (ACE) in the ACL
                         $objThisACE = $_
                         if ($objThisACE.IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
                             #region Found an ACE for the Built-In Administrators group
-                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                $boolBuiltInAdministratorsDenyEntryFound = $true
-                            } else {
-                                # assume 'Allow'
+                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                                 if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                                     $boolBuiltInAdministratorsHaveSufficientAccess = $true
                                 } else {
@@ -7676,10 +7499,7 @@ function Repair-NTFSPermissionsRecursively {
                             #endregion Found an ACE for the Built-In Administrators group
                         } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
                             #region Found an ACE for the SYSTEM account ############
-                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                $boolSYSTEMAccountDenyEntryFound = $true
-                            } else {
-                                # assume 'Allow'
+                            if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                                 if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                                     $boolSYSTEMAccountHasSufficientAccess = $true
                                 } else {
@@ -7692,108 +7512,11 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                             }
                             #endregion Found an ACE for the SYSTEM account ############
-                        } else {
-                            # check additional accounts
-                            $boolFoundGroup = $false
-
-                            if ($boolFoundGroup -eq $false) {
-                                if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                                    # Check the additional administrator account/group
-                                    if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
-                                        $boolFoundGroup = $true
-                                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                            $boolAdditionalAdministratorAccountOrGroupDenyEntryFound = $true
-                                        } else {
-                                            # assume 'Allow'
-                                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                                $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                                            } else {
-                                                # See if the FileSystemRights is an integer value that
-                                                # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                                $intFileSystemRights = [int]($objThisACE.FileSystemRights)
-                                                if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                                    $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            if ($boolFoundGroup -eq $false) {
-                                if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                                    # Check the additional administrator account/group
-                                    if ($objThisACE.IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
-                                        $boolFoundGroup = $true
-                                        if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
-                                            $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound = $true
-                                        } else {
-                                            # assume 'Allow'
-                                            # TODO: This needs to be fixed to convert ReadAndExecute permissions to a string, then look for the string in the FileSystemRights property, which is a comma-separated list. The read only account could also have elevated permissions (something beyond read and execute), which would also be acceptable
-                                            if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                                $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                                            } else {
-                                                # See if the FileSystemRights is an integer value that
-                                                # includes ReadAndExecute (131241) or GENERIC_EXECUTE (536870912)
-                                                # TODO: determine if GENERIC_EXECUTE is the correct value
-                                                $intFileSystemRights = [int]($objThisACE.FileSystemRights)
-                                                if (($intFileSystemRights -band 131241) -eq 131241 -or ($intFileSystemRights -band 536870912) -eq 536870912) {
-                                                    $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                         #endregion Looping through each access control entry (ACE) in the ACL
                     }
 
-                    if ($null -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
-                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $true
-                    }
-                    if ($null -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
-                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $true
-                    }
-
-                    if ($boolBuiltInAdministratorsDenyEntryFound) {
-                        if ($WorkingPath -ne $refToRealPath.Value) {
-                            $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                        } else {
-                            $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                        }
-                        Write-Warning -Message $strMessage
-                        $boolBuiltInAdministratorsHaveSufficientAccess = $false
-                    }
-                    if ($boolSYSTEMAccountDenyEntryFound) {
-                        if ($WorkingPath -ne $refToRealPath.Value) {
-                            $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                        } else {
-                            $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                        }
-                        Write-Warning -Message $strMessage
-                        $boolSYSTEMAccountHasSufficientAccess = $false
-                    }
-                    if ($boolAdditionalAdministratorAccountOrGroupDenyEntryFound) {
-                        if ($WorkingPath -ne $refToRealPath.Value) {
-                            $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                        } else {
-                            $strMessage = 'The account "' + $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                        }
-                        Write-Warning $strMessage
-                        $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess = $false
-                    }
-                    if ($boolAdditionalReadOnlyAccountOrGroupDenyEntryFound) {
-                        if ($WorkingPath -ne $refToRealPath.Value) {
-                            $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). Please remove this deny permission or update this script to do so.'
-                        } else {
-                            $strMessage = 'The account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '" is denied access to the file/folder "' + $WorkingPath + '". Please remove this deny permission or update this script to do so.'
-                        }
-                        Write-Warning -Message $strMessage
-                        $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess = $false
-                    }
-
-                    if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false -or $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess -eq $false -or $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess -eq $false) {
+                    if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false) {
                         #region Permissions adjustments were attempted; however, they are still not correct
                         if ($WorkingPath -ne $refToRealPath.Value) {
                             $strMessage = 'Despite attempting to apply permissions to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"), the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.'
@@ -9520,12 +9243,6 @@ function Repair-NTFSPermissionsRecursively {
             #endregion Looping through each ACE in the ACL ############################
         }
         #endregion Look for ACEs that need to be removed, or that already exist (and don't need to be added)
-
-
-        # TODO: Need to remove this variable: $boolAdditionalAdministratorAccountOrGroupDenyEntryFound
-        # TODO: Need to remove this variable: $boolAdditionalAdministratorAccountOrGroupHasSufficientAccess
-        # TODO: Need to remove this variable: $boolAdditionalReadOnlyAccountOrGroupDenyEntryFound
-        # TODO: Need to remove this variable: $boolAdditionalReadOnlyAccountOrGroupHasSufficientAccess
 
         if ($boolBuiltInAdministratorsInheritableACENeedsToBeApplied) {
             $strPrincipal = $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value
