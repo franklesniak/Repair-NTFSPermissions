@@ -133,7 +133,7 @@
 # existing permissions are not known or documented (and even if they are known or
 # documented, it can be time-consuming and disruptive to business to re-apply them).
 #
-# Version 1.1.20250107.0
+# Version 1.1.20250111.0
 
 #region License ####################################################################
 # Copyright (c) 2025 Frank Lesniak
@@ -165,10 +165,10 @@ param (
     [string]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl = 'BUILTIN\Administrators',
     [string]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls = 'SYSTEM',
     [string]$NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM',
-    [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = $null,
-    [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = $null,
-    [string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = $null,
-    [string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = $null,
+    [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = '',
+    [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = '',
+    [string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = '',
+    [string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl = '',
     [switch]$RemoveUnresolvedSIDs,
     [string]$PathToCSVContainingKnownSIDs = $null
 )
@@ -426,7 +426,7 @@ function Repair-NTFSPermissionsRecursively {
     # that indicates the current recursion depth. If not supplied, the parameter
     # defaults to 0.
     #
-    # Version: 2.1.20250108.0
+    # Version: 2.1.20250111.0
 
     #region License ############################################################
     # Copyright (c) 2025 Frank Lesniak
@@ -6759,22 +6759,22 @@ function Repair-NTFSPermissionsRecursively {
     # TODO: Add real path info here
     if ($null -eq $ReferenceToHashtableOfKnownSIDs) {
         if ($WorkingPath -ne $refToRealPath.Value) {
-            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
+            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
         } else {
-            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
+            $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
         }
     } else {
         if ($null -eq $ReferenceToHashtableOfKnownSIDs.Value) {
             if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
             } else {
-                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
             }
         } else {
             if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed); Recursion depth :' + [string]$RecursionDepth
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed); Recursion depth :' + [string]$RecursionDepth
             } else {
-                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path lenght limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed); Recursion depth :' + [string]$RecursionDepth
+                $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: yes (unresolved SIDs unmatched to SIDs in the hashtable will be removed); Recursion depth :' + [string]$RecursionDepth
             }
         }
     }
@@ -8159,6 +8159,17 @@ function Repair-NTFSPermissionsRecursively {
                 ForEach-Object {
                     $strIdentityReference = $_.IdentityReference.Value
                     $intFileSystemRights = [int]($_.FileSystemRights)
+                    # TODO: The following line throws the following error on CREATOR
+                    # OWNER permissions: Cannot convert value "268435456" to type
+                    # "System.Security.AccessControl.FileSystemRights" due to
+                    # enumeration values that are not valid. Specify one of the
+                    # following enumeration values and try again. The possible
+                    # enumeration values are "ListDirectory,ReadData,WriteData,
+                    # CreateFiles,CreateDirectories,AppendData,ReadExtendedAttributes,
+                    # WriteExtendedAttributes,Traverse,ExecuteFile,
+                    # DeleteSubdirectoriesAndFiles,ReadAttributes,WriteAttributes,
+                    # Write,Delete,ReadPermissions,Read,ReadAndExecute,Modify,
+                    # ChangePermissions,TakeOwnership,Synchronize,FullControl
                     $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$intFileSystemRights
                     $intInheritanceFlags = [int]($_.InheritanceFlags)
                     $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
@@ -8228,9 +8239,20 @@ function Repair-NTFSPermissionsRecursively {
             $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
             $boolSYSTEMInheritableACENeedsToBeApplied = $false
             $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
-            $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $true
+
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $true
+            } else {
+                $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+            }
+
             $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
-            $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $true
+
+            if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $true
+            } else {
+                $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+            }
             #endregion This object is a file
         }
         #endregion Initialize action tags for each type of ACE ########################
@@ -8303,7 +8325,7 @@ function Repair-NTFSPermissionsRecursively {
                             #endregion Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
                         }
                         #endregion Non-inherited ACE is a SID #########################
-                    } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
+                    } elseif (Test-ValidSID ([ref](($arrWorkingACEs[$intCounterA]).IdentityReference))) {
                         #region Non-inherited ACE is a SID (string) ################
                         if ($boolRemoveUnresolvedSIDs -eq $true) {
                             #region Non-inherited ACE is a SID and the function is set to remove unresolved SIDs
@@ -8892,7 +8914,7 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
                             }
                             #endregion At the root of the process; inherited ACE is a SID
-                        } elseif ((Test-ValidSID (($arrWorkingACEs[$intCounterA]).IdentityReference)) -eq $true) {
+                        } elseif (Test-ValidSID ([ref](($arrWorkingACEs[$intCounterA]).IdentityReference))) {
                             #region At the root of the process; inherited ACE is a SID (string)
                             if ($boolRemoveUnresolvedSIDs -eq $true) {
                                 #region At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
