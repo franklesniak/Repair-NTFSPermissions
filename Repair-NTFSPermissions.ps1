@@ -8158,19 +8158,8 @@ function Repair-NTFSPermissionsRecursively {
         $arrWorkingACEs = @($arrACEs | Where-Object { $_.IsInherited -eq $false } |
                 ForEach-Object {
                     $strIdentityReference = $_.IdentityReference.Value
+                    $identityReference = [System.Security.Principal.NTAccount]$strIdentityReference
                     $intFileSystemRights = [int]($_.FileSystemRights)
-                    # TODO: The following line throws the following error on CREATOR
-                    # OWNER permissions: Cannot convert value "268435456" to type
-                    # "System.Security.AccessControl.FileSystemRights" due to
-                    # enumeration values that are not valid. Specify one of the
-                    # following enumeration values and try again. The possible
-                    # enumeration values are "ListDirectory,ReadData,WriteData,
-                    # CreateFiles,CreateDirectories,AppendData,ReadExtendedAttributes,
-                    # WriteExtendedAttributes,Traverse,ExecuteFile,
-                    # DeleteSubdirectoriesAndFiles,ReadAttributes,WriteAttributes,
-                    # Write,Delete,ReadPermissions,Read,ReadAndExecute,Modify,
-                    # ChangePermissions,TakeOwnership,Synchronize,FullControl
-                    $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$intFileSystemRights
                     $intInheritanceFlags = [int]($_.InheritanceFlags)
                     $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
                     $intPropagationFlags = [int]($_.PropagationFlags)
@@ -8178,7 +8167,7 @@ function Repair-NTFSPermissionsRecursively {
                     $intAccessControlType = [int]($_.AccessControlType)
                     $accessControlType = [System.Security.AccessControl.AccessControlType]$intAccessControlType
 
-                    New-Object System.Security.AccessControl.FileSystemAccessRule($strIdentityReference, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                    $objThisObjectPermission.AccessRuleFactory($identityReference, $intFileSystemRights, $false, $inheritanceFlags, $propagationFlags, $accessControlType)
                 })
         #endregion Make a copy of $arrACEs and store it in $arrWorkingACEs ############
 
@@ -8352,12 +8341,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $strMessage = 'Removing unresolved SID "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" from path "' + $WorkingPath + '".'
                                 }
                                 Write-Verbose -Message $strMessage
-                                $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
-                                $fileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
+                                $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
+                                $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
                                 $inheritanceFlags = ($arrWorkingACEs[$intCounterA]).InheritanceFlags
                                 $propagationFlags = ($arrWorkingACEs[$intCounterA]).PropagationFlags
-                                $SID = New-Object System.Security.Principal.SecurityIdentifier(($arrWorkingACEs[$intCounterA]).IdentityReference.Value)
-                                $fileSystemAccessRuleOld = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType)
+                                $accessControlType = ($arrWorkingACEs[$intCounterA]).AccessControlType
+                                $fileSystemAccessRuleOld = $objThisObjectPermission.AccessRuleFactory($SID, $intFileSystemRights, $false, $inheritanceFlags, $propagationFlags, $accessControlType)
                                 $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
                                 if ($boolSuccess -eq $false) {
                                     #region Access rule removal failed #########
@@ -9027,7 +9016,7 @@ function Repair-NTFSPermissionsRecursively {
                                             $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
                                             $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
                                             if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
-                                                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                                $boolSYSTEMInheritableACENeedsToBeApplied = $false
                                             }
                                             #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
                                         }
@@ -9283,7 +9272,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9297,7 +9291,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
@@ -9322,7 +9321,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9336,7 +9340,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
@@ -9361,7 +9370,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9375,7 +9389,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
@@ -9400,7 +9419,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9414,7 +9438,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
@@ -9439,7 +9468,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9453,7 +9487,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
@@ -9478,7 +9517,12 @@ function Repair-NTFSPermissionsRecursively {
             $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
             if ($boolSuccess -eq $false) {
                 #region Access rule addition failed ################################
-                Write-Verbose ('...the permission was not added (.NET call failed)...')
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                }
+                Write-Warning -Message $strMessage
                 #endregion Access rule addition failed ################################
             } else {
                 #region Access rule addition was successful #####
@@ -9492,7 +9536,12 @@ function Repair-NTFSPermissionsRecursively {
                     #endregion Permissions confirmed added based on change in ACE count
                 } else {
                     #region Based on no change in ACE count, permissions were not added
-                    Write-Verbose ('...the permission was not added...')
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following file. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
                     #endregion Based on no change in ACE count, permissions were not added
                 }
                 #endregion Access rule addition was successful #####
