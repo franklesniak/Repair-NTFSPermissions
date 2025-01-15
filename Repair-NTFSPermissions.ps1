@@ -133,7 +133,7 @@
 # existing permissions are not known or documented (and even if they are known or
 # documented, it can be time-consuming and disruptive to business to re-apply them).
 #
-# Version 1.1.20250111.0
+# Version 1.1.20250115.0
 
 #region License ####################################################################
 # Copyright (c) 2025 Frank Lesniak
@@ -426,7 +426,7 @@ function Repair-NTFSPermissionsRecursively {
     # that indicates the current recursion depth. If not supplied, the parameter
     # defaults to 0.
     #
-    # Version: 2.1.20250111.0
+    # Version: 2.1.20250115.0
 
     #region License ############################################################
     # Copyright (c) 2025 Frank Lesniak
@@ -7297,13 +7297,13 @@ function Repair-NTFSPermissionsRecursively {
             if ($null -eq $objThisObjectPermission) {
                 #region The permissions object was null, indicating that the ACL was blank/empty
                 $arrACEs = @()
-                $boolPermissionsInherited = $false
+                $boolPermissionsNotInherited = $true
                 #endregion The permissions object was null, indicating that the ACL was blank/empty
             } else {
                 #region The permissions object was not null
                 $arrACEs = @($objThisObjectPermission.Access)
-                $boolPermissionsInherited = $objThisObjectPermission.AreAccessRulesProtected
-                if ($boolPermissionsInherited -ne $true -and $boolPermissionsInherited -ne $false) {
+                $boolPermissionsNotInherited = $objThisObjectPermission.AreAccessRulesProtected
+                if ($boolPermissionsNotInherited -ne $true -and $boolPermissionsNotInherited -ne $false) {
                     #region The permissions inheritance status was not a boolean value
                     if ($WorkingPath -ne $refToRealPath.Value) {
                         $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
@@ -7311,7 +7311,7 @@ function Repair-NTFSPermissionsRecursively {
                         $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
                     }
                     Write-Warning -Message $strMessage
-                    $boolPermissionsInherited = $false
+                    $boolPermissionsNotInherited = $true
                     #endregion The permissions inheritance status was not a boolean value
                 }
                 #endregion The permissions object was not null
@@ -7463,8 +7463,8 @@ function Repair-NTFSPermissionsRecursively {
 
                     $arrACEs = @($objThisObjectPermission.Access)
 
-                    $boolPermissionsInherited = $objThisObjectPermission.AreAccessRulesProtected
-                    if ($boolPermissionsInherited -ne $true -and $boolPermissionsInherited -ne $false) {
+                    $boolPermissionsNotInherited = $objThisObjectPermission.AreAccessRulesProtected
+                    if ($boolPermissionsNotInherited -ne $true -and $boolPermissionsNotInherited -ne $false) {
                         #region The permissions inheritance status was not a boolean value
                         if ($WorkingPath -ne $refToRealPath.Value) {
                             $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
@@ -7472,7 +7472,7 @@ function Repair-NTFSPermissionsRecursively {
                             $strMessage = 'The script was able to read permissions from the folder/file "' + $WorkingPath + '" using Get-Acl, but the permissions inheritance status was not a boolean value. This is unexpected.'
                         }
                         Write-Warning -Message $strMessage
-                        $boolPermissionsInherited = $false
+                        $boolPermissionsNotInherited = $true
                         #endregion The permissions inheritance status was not a boolean value
                     }
 
@@ -8155,11 +8155,12 @@ function Repair-NTFSPermissionsRecursively {
         #endregion Check to see if unresolved SIDs should be removed ##################
 
         #region Make a copy of $arrACEs and store it in $arrWorkingACEs ############
-        $arrWorkingACEs = @($arrACEs | Where-Object { $_.IsInherited -eq $false } |
+        $arrWorkingACEs = @($arrACEs |
                 ForEach-Object {
                     $strIdentityReference = $_.IdentityReference.Value
                     $identityReference = [System.Security.Principal.NTAccount]$strIdentityReference
                     $intFileSystemRights = [int]($_.FileSystemRights)
+                    $boolACEInherited = $_.IsInherited
                     $intInheritanceFlags = [int]($_.InheritanceFlags)
                     $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]$intInheritanceFlags
                     $intPropagationFlags = [int]($_.PropagationFlags)
@@ -8167,7 +8168,7 @@ function Repair-NTFSPermissionsRecursively {
                     $intAccessControlType = [int]($_.AccessControlType)
                     $accessControlType = [System.Security.AccessControl.AccessControlType]$intAccessControlType
 
-                    $objThisObjectPermission.AccessRuleFactory($identityReference, $intFileSystemRights, $false, $inheritanceFlags, $propagationFlags, $accessControlType)
+                    $objThisObjectPermission.AccessRuleFactory($identityReference, $intFileSystemRights, $boolACEInherited, $inheritanceFlags, $propagationFlags, $accessControlType)
                 })
         #endregion Make a copy of $arrACEs and store it in $arrWorkingACEs ############
 
@@ -8190,7 +8191,7 @@ function Repair-NTFSPermissionsRecursively {
 
         #region Initialize action tags for each type of ACE ########################
         if ($objThis.PSIsContainer) {
-            if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+            if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                 #region This object is a folder and either it is not inheriting any permissions, or we are at the root of the process
                 $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $true
                 $boolSYSTEMInheritableACENeedsToBeApplied = $true
@@ -8439,7 +8440,7 @@ function Repair-NTFSPermissionsRecursively {
                                     # to apply an inheritable ACE to this object, and
                                     # it's because we've already reviewed permissions
                                     # on a per-item basis
-                                    if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                    if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                         #region Found a non-inherited allow ACE for the built-in Administrators group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                         $boolThisACEHasTheRequiredAmountOfPermissions = $false
                                         if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
@@ -8531,7 +8532,7 @@ function Repair-NTFSPermissionsRecursively {
                                     # to apply an inheritable ACE to this object, and
                                     # it's because we've already reviewed permissions
                                     # on a per-item basis
-                                    if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                    if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                         #region Found a non-inherited allow ACE for the SYSTEM account on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                         $boolThisACEHasTheRequiredAmountOfPermissions = $false
                                         if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
@@ -8618,7 +8619,7 @@ function Repair-NTFSPermissionsRecursively {
                                             #region Found a non-inherited allow ACE for the additional administrator account/group
                                             if ($objThis.PSIsContainer) {
                                                 #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object
-                                                if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                                if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                                     #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                                     $boolThisACEHasTheRequiredAmountOfPermissions = $false
                                                     if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
@@ -8837,7 +8838,7 @@ function Repair-NTFSPermissionsRecursively {
                                                 # all ACEs, not just this one) - or
                                                 # check to see if we are at the
                                                 # root of the process
-                                                if ((-not $boolPermissionsInherited) -or ($RecursionDepth -eq 0)) {
+                                                if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                                     #region Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
                                                     if ($objThis.PSIsContainer) {
                                                         #region Found a non-inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
@@ -8873,13 +8874,17 @@ function Repair-NTFSPermissionsRecursively {
                 #endregion Current ACE is not inherited ###############################
             } else {
                 #region Current ACE is inherited ###################################
-                if ($RecursionDepth -eq 0) {
-                    #region Current ACE is inherited and we are at the root of the process
-                    # This is the only circumstance where we care about inherited ACEs
-
-                    if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
-                        #region At the root of the process; inherited ACE has an IdentityReference
-                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Found inherited ACE in path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '"). AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
+                } else {
+                    $strMessage = 'Found inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
+                }
+                Write-Verbose -Message $strMessage
+                if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
+                    #region Inherited ACE has an IdentityReference #################
+                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
+                        #region Inherited ACE is a SID #############################
+                        if ($RecursionDepth -eq 0) {
                             #region At the root of the process; inherited ACE is a SID
                             if ($boolRemoveUnresolvedSIDs -eq $true) {
                                 #region At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
@@ -8903,7 +8908,11 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
                             }
                             #endregion At the root of the process; inherited ACE is a SID
-                        } elseif (Test-ValidSID ([ref](($arrWorkingACEs[$intCounterA]).IdentityReference))) {
+                        }
+                        #endregion Inherited ACE is a SID #############################
+                    } elseif (Test-ValidSID ([ref](($arrWorkingACEs[$intCounterA]).IdentityReference))) {
+                        #region Inherited ACE is a SID (string) ####################
+                        if ($RecursionDepth -eq 0) {
                             #region At the root of the process; inherited ACE is a SID (string)
                             if ($boolRemoveUnresolvedSIDs -eq $true) {
                                 #region At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
@@ -8927,14 +8936,18 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion At the root of the process; inherited ACE is a SID and the function is set to remove unresolved SIDs
                             }
                             #endregion At the root of the process; inherited ACE is a SID (string)
-                        } else {
-                            #region At the root of the process; inherited ACE is presumably an NTAccount #######
-                            # See:
-                            # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
+                        }
+                        #endregion Inherited ACE is a SID (string) ####################
+                    } else {
+                        #region Inherited ACE is presumably an NTAccount ###########
+                        # See:
+                        # https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.identityreference?view=net-7.0
 
-                            if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
-                                #region At the root of the process, found an inherited ACE for the built-in Administrators group
-                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value) {
+                            #region Found an inherited ACE for the built-in Administrators group
+                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                #region Found an inherited deny ACE for the built-in Administrators group
+                                if ($RecursionDepth -eq 0) {
                                     #region At the root of the process, found an inherited deny ACE for the built-in Administrators group
                                     if ($WorkingPath -ne $refToRealPath.Value) {
                                         $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
@@ -8943,46 +8956,52 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                     Write-Warning -Message $strMessage
                                     #endregion At the root of the process, found an inherited deny ACE for the built-in Administrators group
-                                } else {
-                                    #region At the root of the process, found an inherited allow ACE for the built-in Administrators group
-
-                                    # We are not worried about built-in Administrators
-                                    # group permissions on individual files because we've
-                                    # already gone through and fixed them
-                                    if ($objThis.PSIsContainer) {
-                                        #region At the root of the process, found an inherited allow ACE for the built-in Administrators group on a folder object
-                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
-                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                        } else {
-                                            # See if the FileSystemRights is an integer value that
-                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
-                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                            }
-                                        }
-                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                            #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
-                                            # Check inheritable ACE settings
-                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
-                                                $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
-                                            }
-                                            #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
-                                        }
-                                        # We don't care about file objects because they
-                                        # have already been addressed; see comment above
-                                        # the region start
-                                        #endregion At the root of the process, found an inherited allow ACE for the built-in Administrators group on a folder object
-                                    }
-                                    #endregion At the root of the process, found an inherited allow ACE for the built-in Administrators group
                                 }
-                                #endregion At the root of the process, found an inherited ACE for the built-in Administrators group
-                            } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
-                                #region At the root of the process, found an inherited ACE for the SYSTEM account
-                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                #endregion Found an inherited deny ACE for the built-in Administrators group
+                            } else {
+                                #region Found an inherited allow ACE for the built-in Administrators group
+
+                                # We are not worried about built-in Administrators
+                                # group "allow" permissions on individual files because
+                                # we've already gone through and fixed them
+                                if ($objThis.PSIsContainer) {
+                                    #region Found an inherited allow ACE for the built-in Administrators group on a folder object
+                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
+                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                    } else {
+                                        # See if the FileSystemRights is an integer value that
+                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        }
+                                    }
+
+                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                        #region Found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group
+                                        # Check inheritable ACE settings
+                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                            $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                        }
+                                        #endregion Found an inherited allow ACE on a folder object that grants full control to the built-in Administrators group
+                                    }
+                                    # We don't care about file objects because they
+                                    # have already been addressed; see comment above
+                                    # the region start
+                                    #endregion Found an inherited allow ACE for the built-in Administrators group on a folder object
+                                }
+                                #endregion Found an inherited allow ACE for the built-in Administrators group
+                            }
+                            #endregion Found an inherited ACE for the built-in Administrators group
+                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                            #region Found an inherited ACE for the SYSTEM account ##
+                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                #region Found an inherited deny ACE for the SYSTEM account
+                                if ($RecursionDepth -eq 0) {
                                     #region At the root of the process, found an inherited deny ACE for the SYSTEM account
                                     if ($WorkingPath -ne $refToRealPath.Value) {
                                         $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
@@ -8991,54 +9010,60 @@ function Repair-NTFSPermissionsRecursively {
                                     }
                                     Write-Warning -Message $strMessage
                                     #endregion At the root of the process, found an inherited deny ACE for the SYSTEM account
-                                } else {
-                                    #region At the root of the process, found an inherited allow ACE for the SYSTEM account
-
-                                    # We are not worried about the SYSTEM account
-                                    # permissions on individual files because we've
-                                    # already gone through and fixed them
-                                    if ($objThis.PSIsContainer) {
-                                        #region At the root of the process, found an inherited allow ACE for the SYSTEM account on a folder object
-                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
-                                        if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                        } else {
-                                            # See if the FileSystemRights is an integer value that
-                                            # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                            $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
-                                            if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                            }
-                                        }
-                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                            #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
-                                            # Check inheritable ACE settings
-                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
-                                                $boolSYSTEMInheritableACENeedsToBeApplied = $false
-                                            }
-                                            #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
-                                        }
-                                        # We don't care about file objects because they
-                                        # have already been addressed; see comment above
-                                        # the region start
-                                        #endregion At the root of the process, found an inherited allow ACE for the SYSTEM account on a folder object
-                                    }
-                                    #endregion At the root of the process, found an inherited allow ACE for the SYSTEM account
                                 }
-                                #endregion At the root of the process, found an inherited ACE for the SYSTEM account
+                                #endregion Found an inherited deny ACE for the SYSTEM account
                             } else {
-                                # check additional accounts
-                                $boolFoundGroup = $false
+                                #region Found an inherited allow ACE for the SYSTEM account
 
-                                if ($boolFoundGroup -eq $false) {
-                                    if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                                        #region At the root of the process, we're working on an inherited ACE and an additional administrator account/group is specified
-                                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
-                                            #region At the root of the process, we found an inherited ACE for the additional administrator account/group
-                                            $boolFoundGroup = $true
-                                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                # We are not worried about the SYSTEM account
+                                # permissions on individual files because we've
+                                # already gone through and fixed them
+                                if ($objThis.PSIsContainer) {
+                                    #region Found an inherited allow ACE for the SYSTEM account on a folder object
+                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
+                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                    } else {
+                                        # See if the FileSystemRights is an integer value that
+                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                        }
+                                    }
+
+                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                        #region Found an inherited allow ACE on a folder object that grants full control to the SYSTEM account
+                                        # Check inheritable ACE settings
+                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                            $boolSYSTEMInheritableACENeedsToBeApplied = $false
+                                        }
+                                        #endregion Found an inherited allow ACE on a folder object that grants full control to the SYSTEM account
+                                    }
+                                    # We don't care about file objects because they
+                                    # have already been addressed; see comment above
+                                    # the region start
+                                    #endregion Found an inherited allow ACE for the SYSTEM account on a folder object
+                                }
+                                #endregion Found an inherited allow ACE for the SYSTEM account
+                            }
+                            #endregion Found an inherited ACE for the SYSTEM account ##
+                        } else {
+                            # check additional accounts
+                            $boolFoundGroup = $false
+
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                    #region We're working on an inherited ACE and an additional administrator account/group is specified
+                                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) {
+                                        #region We found an inherited ACE for the additional administrator account/group
+                                        $boolFoundGroup = $true
+                                        if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                            #region Found an inherited deny ACE for the additional administrator account/group
+                                            if ($RecursionDepth -eq 0) {
                                                 #region At the root of the process, found an inherited deny ACE for the additional administrator account/group
                                                 if ($WorkingPath -ne $refToRealPath.Value) {
                                                     $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
@@ -9047,154 +9072,162 @@ function Repair-NTFSPermissionsRecursively {
                                                 }
                                                 Write-Warning -Message $strMessage
                                                 #endregion At the root of the process, found an inherited deny ACE for the additional administrator account/group
-                                            } else {
-                                                #region At the root of the process, found an inherited allow ACE for the additional administrator account/group
-                                                if ($objThis.PSIsContainer) {
-                                                    #region At the root of the process, found an inherited allow ACE for the additional administrator account/group on a folder object
-                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
-                                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                    } else {
-                                                        # See if the FileSystemRights is an integer value that
-                                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
-                                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                        }
-                                                    }
-                                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                        #region At the root of the process, found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
-                                                        # Check inheritable ACE settings
-                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
-                                                            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
-                                                        }
-                                                        #endregion At the root of the process, found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
-                                                    }
-                                                    #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group on a folder object
-                                                } else {
-                                                    #region At the root of the process, found an inherited allow ACE for the additional administrator account/group on a file object
-                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $false
-                                                    if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
-                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                    } else {
-                                                        # See if the FileSystemRights is an integer value that
-                                                        # includes FullControl (2032127) or GENERIC_ALL (268435456)
-                                                        $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
-                                                        if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
-                                                            $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
-                                                        }
-                                                    }
-                                                    if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                        #region Found a non-inherited allow ACE on a file object that grants full control to the additional administrator account/group
-                                                        $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
-                                                        #endregion Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group
-                                                    }
-                                                    #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group on a file object
-                                                }
-                                                #endregion At the root of the process, found an inherited allow ACE for the additional administrator account/group
                                             }
-                                            #endregion At the root of the process, we found an inherited ACE for the additional administrator account/group
-                                        }
-                                        #endregion At the root of the process, we're working on an inherited ACE and an additional administrator account/group is specified
-                                    }
-                                }
+                                            #endregion Found an inherited deny ACE for the additional administrator account/group
+                                        } else {
+                                            #region Found an inherited allow ACE for the additional administrator account/group
+                                            if ($objThis.PSIsContainer) {
+                                                #region Found an inherited allow ACE for the additional administrator account/group on a folder object
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $false
 
-                                if ($boolFoundGroup -eq $false) {
-                                    if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                                        #region At the root of the process, we're working on an inherited ACE and an additional read-only account/group is specified
-                                        if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
-                                            #region At the root of the process, found an inherited ACE for the additional read-only account/group
-                                            $boolFoundGroup = $true
+                                                if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                } else {
+                                                    # See if the FileSystemRights is an integer value that
+                                                    # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                    $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                    if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                    }
+                                                }
 
-                                            #region Check for minimum-required level of permissions
-                                            $boolThisACEHasTheRequiredAmountOfPermissions = $false
-                                            $intPermissionsThatExceedRequiredAmountOfPermissions = 0
-                                            # Check for read & execute permissions:
-
-                                            # There are three ways to have this. The
-                                            # first is
-                                            # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
-                                            #
-                                            # The second is
-                                            # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
-                                            # +
-                                            # [System.Security.AccessControl.FileSystemRights]::Synchronize)
-                                            #
-                                            # The third is to have
-                                            # GENERIC_EXECUTE (536870912 or
-                                            # 0x20000000) + GENERIC_READ
-                                            # (-2147483648 or 0x80000000)
-                                            #
-                                            # First, check for GENERIC_ALL
-                                            # (268435456 or 0x1000000), which is
-                                            # not part of
-                                            # [System.Security.AccessControl.FileSystemRights]
-                                            $intFileSystemRights = 268435456
-                                            if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
-                                                #region GENERIC_ALL permission found
-                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                # In this case, the permissions that
-                                                # exceed (GENERIC_EXECUTE +
-                                                # GENERIC_READ) are GENERIC_WRITE
-                                                # (1073741824 or 0x40000000)
-                                                #
-                                                # But we should check for any other
-                                                # permissions first:
-                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
-                                                # First calculate any permissions in
-                                                # excess of ReadAndExecute +
-                                                # Synchronize:
-                                                $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
-                                                # Add GENERIC_WRITE:
-                                                $intPermissionsThatExceedRequiredAmountOfPermissions += 1073741824
-                                                #endregion GENERIC_ALL permission found
+                                                if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    #region Found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                    # Check inheritable ACE settings
+                                                    $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                    $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                    if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                        $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                    }
+                                                    #endregion Found an inherited allow ACE on a folder object that grants full control to the additional administrator account/group
+                                                }
+                                                #endregion Found an inherited allow ACE for the additional administrator account/group on a folder object
                                             } else {
-                                                #region No GENERIC_ALL permission found
-                                                # Try plain ol' ReadAndExecute
-                                                # first
-                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                                #region Found an inherited allow ACE for the additional administrator account/group on a file object
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
+                                                if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                } else {
+                                                    # See if the FileSystemRights is an integer value that
+                                                    # includes FullControl (2032127) or GENERIC_ALL (268435456)
+                                                    $intFileSystemRights = [int](($arrWorkingACEs[$intCounterA]).FileSystemRights)
+                                                    if (($intFileSystemRights -band 2032127) -eq 2032127 -or ($intFileSystemRights -band 268435456) -eq 268435456) {
+                                                        $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                    }
+                                                }
+
+                                                if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                    #region Found an inherited allow ACE on a file object that grants full control to the additional administrator account/group
+                                                    $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+                                                    #endregion Found an inherited allow ACE on a file object that grants full control to the additional administrator account/group
+                                                }
+                                                #endregion Found an inherited allow ACE for the additional administrator account/group on a file object
+                                            }
+                                            #endregion Found an inherited allow ACE for the additional administrator account/group
+                                        }
+                                        #endregion We found an inherited ACE for the additional administrator account/group
+                                    }
+                                    #endregion We're working on an inherited ACE and an additional administrator account/group is specified
+                                }
+                            }
+
+                            if ($boolFoundGroup -eq $false) {
+                                if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
+                                    #region We're working on an inherited ACE and an additional read-only account/group is specified
+                                    if (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) {
+                                        #region Found an inherited ACE for the additional read-only account/group
+                                        $boolFoundGroup = $true
+
+                                        #region Check for minimum-required level of permissions
+                                        $boolThisACEHasTheRequiredAmountOfPermissions = $false
+                                        $intPermissionsThatExceedRequiredAmountOfPermissions = 0
+                                        # Check for read & execute permissions:
+
+                                        # There are three ways to have this. The
+                                        # first is
+                                        # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                        #
+                                        # The second is
+                                        # [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                        # +
+                                        # [System.Security.AccessControl.FileSystemRights]::Synchronize)
+                                        #
+                                        # The third is to have
+                                        # GENERIC_EXECUTE (536870912 or
+                                        # 0x20000000) + GENERIC_READ
+                                        # (-2147483648 or 0x80000000)
+                                        #
+                                        # First, check for GENERIC_ALL
+                                        # (268435456 or 0x1000000), which is
+                                        # not part of
+                                        # [System.Security.AccessControl.FileSystemRights]
+                                        $intFileSystemRights = 268435456
+                                        if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                            #region GENERIC_ALL permission found
+                                            $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            # In this case, the permissions that
+                                            # exceed (GENERIC_EXECUTE +
+                                            # GENERIC_READ) are GENERIC_WRITE
+                                            # (1073741824 or 0x40000000)
+                                            #
+                                            # But we should check for any other
+                                            # permissions first:
+                                            $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                                            # First calculate any permissions in
+                                            # excess of ReadAndExecute +
+                                            # Synchronize:
+                                            $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                            # Add GENERIC_WRITE:
+                                            $intPermissionsThatExceedRequiredAmountOfPermissions += 1073741824
+                                            #endregion GENERIC_ALL permission found
+                                        } else {
+                                            #region No GENERIC_ALL permission found
+                                            # Try plain ol' ReadAndExecute
+                                            # first
+                                            $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+                                            if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                            }
+
+                                            # Try ReadAndExecute + Synchronize
+                                            # next
+                                            if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
                                                 if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
                                                     $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                                 }
-
-                                                # Try ReadAndExecute + Synchronize
-                                                # next
-                                                if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                    $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
-                                                    if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
-                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                    }
-                                                }
-
-                                                # Try GENERIC_EXECUTE (536870912 or
-                                                # 0x20000000) and GENERIC_READ
-                                                # (-2147483648 or 0x80000000) next
-                                                if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                    $intFileSystemRights = 536870912 + -2147483648
-                                                    if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
-                                                        $boolThisACEHasTheRequiredAmountOfPermissions = $true
-                                                    }
-                                                }
-
-                                                # Next, regardless of how read &
-                                                # execute permissions were applied, we
-                                                # need to calculate whether any
-                                                # permissions are in excess of read &
-                                                # execute:
-                                                if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                    # Calculate permissions that are in excess of read and execute:
-                                                    $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize -bor 536870912 -bor -2147483648
-                                                    $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
-                                                }
-                                                #endregion No GENERIC_ALL permission found
                                             }
-                                            #endregion Check for minimum-required level of permissions
 
+                                            # Try GENERIC_EXECUTE (536870912 or
+                                            # 0x20000000) and GENERIC_READ
+                                            # (-2147483648 or 0x80000000) next
+                                            if (-not $boolThisACEHasTheRequiredAmountOfPermissions) {
+                                                $intFileSystemRights = 536870912 + -2147483648
+                                                if ((($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights) -eq $intFileSystemRights) {
+                                                    $boolThisACEHasTheRequiredAmountOfPermissions = $true
+                                                }
+                                            }
+
+                                            # Next, regardless of how read &
+                                            # execute permissions were applied, we
+                                            # need to calculate whether any
+                                            # permissions are in excess of read &
+                                            # execute:
                                             if ($boolThisACEHasTheRequiredAmountOfPermissions) {
-                                                #region At the root of the process, found an inherited ACE with at least read & execute permissions for the additional read-only account/group
-                                                if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                                # Calculate permissions that are in excess of read and execute:
+                                                $intFileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize -bor 536870912 -bor -2147483648
+                                                $intPermissionsThatExceedRequiredAmountOfPermissions = ($arrWorkingACEs[$intCounterA]).FileSystemRights - (($arrWorkingACEs[$intCounterA]).FileSystemRights -band $intFileSystemRights)
+                                            }
+                                            #endregion No GENERIC_ALL permission found
+                                        }
+                                        #endregion Check for minimum-required level of permissions
+
+                                        if ($boolThisACEHasTheRequiredAmountOfPermissions) {
+                                            #region Found an inherited ACE with at least read & execute permissions for the additional read-only account/group
+                                            if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
+                                                #region Found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                                if ($RecursionDepth -eq 0) {
                                                     #region At the root of the process, found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
                                                     if ($WorkingPath -ne $refToRealPath.Value) {
                                                         $strMessage = 'Found a deny permission for "' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '" at the root of the permissions repair process that cannot be removed because it''s inherited; please re-run the process on a parent folder, or manually remove the deny permission. Root path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
@@ -9203,11 +9236,14 @@ function Repair-NTFSPermissionsRecursively {
                                                     }
                                                     Write-Warning -Message $strMessage
                                                     #endregion At the root of the process, found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
-                                                } else {
-                                                    #region At the root of the process, found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
-                                                    # Does it have excess permissions?
-                                                    # If so, write a warning.
-                                                    if ($intPermissionsThatExceedRequiredAmountOfPermissions -ne 0) {
+                                                }
+                                                #endregion Found an inherited deny ACE with at least read & execute permissions for the additional read-only account/group
+                                            } else {
+                                                #region Found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                                # Does it have excess permissions?
+                                                if ($intPermissionsThatExceedRequiredAmountOfPermissions -ne 0) {
+                                                    #region Found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
+                                                    if ($RecursionDepth -eq 0) {
                                                         #region At the root of the process, found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
                                                         if ($WorkingPath -ne $refToRealPath.Value) {
                                                             $strMessage = 'An ACE was found at the path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") that grants more permissions than necessary to the account "' + $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value + '". The permissions that exceed Read & Execute are: ' + $intPermissionsThatExceedRequiredAmountOfPermissions
@@ -9217,37 +9253,36 @@ function Repair-NTFSPermissionsRecursively {
                                                         Write-Warning -Message $strMessage
                                                         #endregion At the root of the process, found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
                                                     }
-
-                                                    if ($objThis.PSIsContainer) {
-                                                        #region At the root of the process, found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
-                                                        # Check inheritable ACE
-                                                        # settings
-                                                        $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-                                                        $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-                                                        if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
-                                                            $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
-                                                        }
-                                                        #endregion At the root of the process, found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
-                                                    } else {
-                                                        #region At the root of the process, found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
-                                                        $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
-                                                        #endregion At the root of the process, found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
-                                                    }
-                                                    #endregion At the root of the process, found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
+                                                    #endregion Found an inherited allow ACE with permissions that exceed read & execute for the additional read-only account/group
                                                 }
-                                                #endregion At the root of the process, found an inherited ACE with at least read & execute permissions for the additional read-only account/group
+
+                                                if ($objThis.PSIsContainer) {
+                                                    #region Found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group
+                                                    # Check inheritable ACE settings
+                                                    $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                                                    $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                    if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                        $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
+                                                    }
+                                                    #endregion Found an inherited allow ACE on a folder with at least read & execute permissions for the additional read-only account/group
+                                                } else {
+                                                    #region Found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group
+                                                    $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                                                    #endregion Found an inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group
+                                                }
+                                                #endregion Found an inherited allow ACE with at least read & execute permissions for the additional read-only account/group
                                             }
-                                            #endregion At the root of the process, found an inherited ACE for the additional read-only account/group
+                                            #endregion Found an inherited ACE with at least read & execute permissions for the additional read-only account/group
                                         }
-                                        #endregion At the root of the process, we're working on an inherited ACE and an additional read-only account/group is specified
+                                        #endregion Found an inherited ACE for the additional read-only account/group
                                     }
+                                    #endregion We're working on an inherited ACE and an additional read-only account/group is specified
                                 }
                             }
-                            #endregion At the root of the process; inherited ACE is presumably an NTAccount #######
                         }
-                        #endregion At the root of the process; inherited ACE has an IdentityReference
+                        #endregion Inherited ACE is presumably an NTAccount ###########
                     }
-                    #endregion Current ACE is inherited and we are at the root of the process
+                    #endregion Inherited ACE has an IdentityReference #################
                 }
                 #endregion Current ACE is inherited ###################################
             }
