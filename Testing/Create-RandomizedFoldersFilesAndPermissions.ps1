@@ -163,6 +163,7 @@ function Break-InheritanceAndModifyAcl {
         $acl.SetAccessRuleProtection($true, $true)
         Set-Acl -LiteralPath $targetPath -AclObject $acl
 
+        $acl = Get-Acl -LiteralPath $targetPath
         # Now optionally remove or add an ACE for demonstration.
         # Let’s remove “Everyone” if it exists, or add a random user ACE otherwise.
         $rules = $acl.Access | Where-Object { $_.IdentityReference -eq 'Everyone' -or $_.IdentityReference -eq 'NT AUTHORITY\SYSTEM' }
@@ -191,7 +192,7 @@ function Add-RandomAce {
     )
     try {
         $acl = Get-Acl -LiteralPath $targetPath
-        
+
         # For demonstration, pick from local users or known principals
         $possiblePrincipals = @(
             'Everyone',
