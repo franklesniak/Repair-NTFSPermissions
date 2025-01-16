@@ -1,14 +1,15 @@
 # .SYNOPSIS
 # Scans the permissions at the specified path and ensures that administrators and the
 # SYSTEM account have full control. Optionally, additional accounts/groups can be
-# specified to be granted full control or read-only access.
+# specified to be granted full control or read-only access, and, optionally, the script
+# can remove unresolved ("dead") security identifiers (SIDs).
 #
 # .DESCRIPTION
 # Scans the permissions at the specified path and ensures that local administrators and
 # the SYSTEM account have full control. Optionally, additional accounts/groups can be
-# specified to be granted full control or read-only access. The script will not remove
-# any existing permissions, but will add permissions as necessary to ensure that the
-# specified accounts/groups have the specified access.
+# specified to be granted full control or read-only access. In general, the script will
+# not remove any existing permissions, but will add permissions as necessary to ensure
+# that the specified accounts/groups have the specified access.
 #
 # This script is especially useful because taking ownership of a file or folder through
 # the Windows graphical interface can replace existing permissions, which can be
@@ -16,16 +17,31 @@
 # are known or documented, it can be time-consuming and disruptive to business to re-
 # apply them).
 #
+# Optionally, the script can also be used to remove unresolved ("dead") security
+# identifiers (SIDs) from the NTFS permissions on the specified path and all subfolders
+# and files. This is useful when, for example, users and groups have been deleted from
+# Active Directory but their NTFS permissions are left behind. Removing these SIDs can
+# help to clean up the permissions and make them easier to manage.
+#
 # .PARAMETER PathToFix
 # Specifies the path to be fixed. This parameter is mandatory.
 #
 # .PARAMETER NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls
-# Optionally, specifies the name of the local administrators group. This parameter is
-# optional; if not specified, the default value of 'Administrators' will be used.
+# Optionally, specifies the name of the local administrators group. If not specified,
+# the default value of 'Administrators' will be used.
 #
 # Supplying this parameter may be necessary on non-English systems, where the name of
 # the local administrators group may be different. This parameter is used when taking
-# ownership of the file or folder and when applying permissions using icacls.exe.
+# ownership of the file or folder using takeown.exe and when applying permissions using
+# icacls.exe.
+#
+# To determine the value that should be supplied for this parameter, apply the local
+# administrators group to a test file or folder. Then, at the command prompt, type:
+# icacls "C:\Path\To\Test\FileOrFolder"
+# Inspect the results. You should see something like:
+# BUILTIN\Administrators:(OI)(CI)(F)
+# The part before the colon (BUILTIN\Administrators) is the group name according to
+# icacls.exe.
 #
 # .PARAMETER NameOfBuiltInAdministratorsGroupAccordingToGetAcl
 # Optionally, specifies the name of the local administrators group. This parameter is
@@ -34,38 +50,86 @@
 #
 # Supplying this parameter may be necessary on non-English systems, where the name of
 # the local administrators group may be different. This parameter is used when getting
-# the ACL of the file or folder in PowerShell via Get-Acl.
+# the ACL of the file or folder in PowerShell via Get-Acl or setting it with Set-Acl or
+# SetAccessControl().
+#
+# To determine the value that should be supplied for this parameter, apply the local
+# administrators group to a test file or folder. Then, at the PowerShell prompt, type:
+# $acl = Get-Acl 'C:\Path\To\Test\FileOrFolder'; $acl.Access
+# Inspect the results. You should see something like:
+# IdentityReference : BUILTIN\Administrators
+# The part after the colon (BUILTIN\Administrators) is the group name according to
+# Get-Acl.
 #
 # .PARAMETER NameOfSYSTEMAccountAccordingToTakeOwnAndICacls
 # Optionally, specifies the name of the SYSTEM account. This parameter is optional; if
 # not specified, the default value of 'SYSTEM' will be used.
 #
 # Supplying this parameter may be necessary on non-English systems, where the name of
-# the SYSTEM account may be different. This parameter is used when taking ownership of
-# the file or folder and when applying permissions using icacls.exe.
+# the SYSTEM account may be different. This parameter is used when taking
+# ownership of the file or folder using takeown.exe and when applying permissions using
+# icacls.exe.
 #
-# .PARAMETER NameOfSYSTEMAccountGroupAccordingToGetAcl
+# To determine the value that should be supplied for this parameter, apply the SYSTEM
+# account to a test file or folder. Then, at the command prompt, type:
+# icacls "C:\Path\To\Test\FileOrFolder"
+# Inspect the results. You should see something like:
+# NT AUTHORITY\SYSTEM:(OI)(CI)(F)
+# The part before the colon (NT AUTHORITY\SYSTEM) is the SYSTEM account name according
+# to icacls.exe.
+#
+# .PARAMETER NameOfSYSTEMAccountAccordingToGetAcl
 # Optionally, specifies the name of the SYSTEM account. This parameter is optional; if
 # not specified, the default value of 'NT AUTHORITY\SYSTEM' will be used.
 #
 # Supplying this parameter may be necessary on non-English systems, where the name of
-# the SYSTEM account may be different. This parameter is used when getting the ACL of
-# the file or folder in PowerShell via Get-Acl.
+# the SYSTEM account may be different. This parameter is used when getting
+# the ACL of the file or folder in PowerShell via Get-Acl or setting it with Set-Acl or
+# SetAccessControl().
+#
+# To determine the value that should be supplied for this parameter, apply the SYSTEM
+# account to a test file or folder. Then, at the PowerShell prompt, type:
+# $acl = Get-Acl 'C:\Path\To\Test\FileOrFolder'; $acl.Access
+# Inspect the results. You should see something like:
+# IdentityReference : NT AUTHORITY\SYSTEM
+# The part after the colon (NT AUTHORITY\SYSTEM) is the SYSTEM account name according
+# to Get-Acl.
 #
 # .PARAMETER NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls
 # Optionally, specifies the name of an additional account or group to be granted full
-# control. This parameter is optional; if not specified, the default value of $null will
-# be used and the script will not attempt to grant additional full control permissions.
+# control. This parameter is optional; if not specified, the default value of $null
+# will be used and the script will not attempt to grant additional full control
+# permissions.
 #
-# This parameter is used when applying permissions using icacls.exe.
+# This parameter is used when getting the ACL of the file or folder in PowerShell via
+# Get-Acl or setting it with Set-Acl or SetAccessControl().
+#
+# To determine the value that should be supplied for this parameter, apply the
+# additional administrator account or group to a test file or folder. Then, at the
+# command prompt, type:
+# icacls "C:\Path\To\Test\FileOrFolder"
+# Inspect the results. You should see something like:
+# DOMAIN\AccountName:(OI)(CI)(F)
+# The part before the colon (DOMAIN\AccountName) is the account or group name according
+# to icacls.exe.
 #
 # .PARAMETER NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl
 # Optionally, specifies the name of an additional account or group to be granted full
-# control. This parameter is optional; if not specified, the default value of $null will
-# be used and the script will not attempt to grant additional full control permissions.
+# control. This parameter is optional; if not specified, the default value of $null
+# will be used and the script will not attempt to grant additional full control
+# permissions.
 #
 # This parameter is used when getting the ACL of the file or folder in PowerShell via
-# Get-Acl.
+# Get-Acl or setting it with Set-Acl or SetAccessControl().
+#
+# To determine the value that should be supplied for this parameter, apply the
+# additional administrator account or group to a test file or folder. Then, at the
+# PowerShell prompt, type:
+# $acl = Get-Acl 'C:\Path\To\Test\FileOrFolder'; $acl.Access
+# Inspect the results. You should see something like:
+# IdentityReference : DOMAIN\AccountName
+# The part after the colon (DOMAIN\AccountName) is the account or group name according
+# to Get-Acl.
 #
 # .PARAMETER NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls
 # Optionally, specifies the name of an additional account or group to be granted read-
@@ -74,13 +138,31 @@
 #
 # This parameter is used when applying permissions using icacls.exe.
 #
+# To determine the value that should be supplied for this parameter, apply the
+# additional read-only account or group to a test file or folder. Then, at the
+# command prompt, type:
+# icacls "C:\Path\To\Test\FileOrFolder"
+# Inspect the results. You should see something like:
+# DOMAIN\AccountName:(OI)(CI)(RX)
+# The part before the colon (DOMAIN\AccountName) is the account or group name according
+# to icacls.exe.
+#
 # .PARAMETER NameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl
 # Optionally, specifies the name of an additional account or group to be granted read-
 # only access. This parameter is optional; if not specified, the default value of $null
 # will be used and the script will not attempt to grant additional read-only permissions.
 #
 # This parameter is used when getting the ACL of the file or folder in PowerShell via
-# Get-Acl.
+# Get-Acl or setting it with Set-Acl or SetAccessControl().
+#
+# To determine the value that should be supplied for this parameter, apply the
+# additional read-only account or group to a test file or folder. Then, at the
+# PowerShell prompt, type:
+# $acl = Get-Acl 'C:\Path\To\Test\FileOrFolder'; $acl.Access
+# Inspect the results. You should see something like:
+# IdentityReference : DOMAIN\AccountName
+# The part after the colon (DOMAIN\AccountName) is the account or group name according
+# to Get-Acl.
 #
 # .PARAMETER RemoveUnresolvedSIDs
 # Optionally, specifies that unresolved SIDs should be removed from the ACL. This
@@ -89,20 +171,20 @@
 #
 # .PARAMETER PathToCSVContainingKnownSIDs
 # Optionally, specifies the path to a CSV file containing a list of known SIDs. This
-# parameter is optional in general. However, if the RemoveUnresolvedSIDs switch parameter
-# is specified, then this parameter must also be specified. If specified, this parameter
-# must be a string containing a valid path to a CSV file. The CSV file must contain a
-# column named 'SID' that contains the SIDs to be considered "known,", i.e., SIDs that
-# should not be removed from the ACL. The CSV file may contain additional columns, but
-# they will be ignored.
+# parameter is optional in general. However, if the RemoveUnresolvedSIDs switch
+# parameter is specified, then this parameter must also be specified. If specified,
+# this parameter must be a string containing a valid path to a CSV file. The CSV file
+# must contain a column named 'SID' that contains the SIDs to be considered "known,",
+# i.e., SIDs that should not be removed from the ACL. The CSV file may contain
+# additional columns, but they will be ignored.
 #
 # If unresolved SIDs are to be removed, this CSV is required because it provides
 # protection from the scenario where, for example, connectivity between a member server
-# and Active Directory Domain Services is lost and the member server is unable to resolve
-# SIDs to names. In this scenario, if this protection were not in place, then the script
-# would remove all unresolved SIDs from the ACL, including SIDs that are not resolved
-# because of the lost connectivity. This could result in the loss of access to the file
-# or folder.
+# and Active Directory Domain Services is lost and the member server is unable to
+# resolve SIDs to names. In this scenario, if this protection were not in place, then
+# the script would remove all unresolved SIDs from the ACL, including SIDs that are not
+# resolved because of the lost connectivity. This could result in the loss of access to
+# the file or folder.
 #
 # Therefore, in the specified CSV, it is highly recommended to provide a list of *all
 # SIDs* in the environment. This should include SIDs for all user accounts, groups, and
@@ -128,12 +210,13 @@
 # None
 #
 # .NOTES
-# This script is useful because taking ownership of a file or folder through the Windows
-# graphical interface can replace existing permissions, which can be problematic if the
-# existing permissions are not known or documented (and even if they are known or
-# documented, it can be time-consuming and disruptive to business to re-apply them).
+# This script is useful because taking ownership of a file or folder through the
+# Windows graphical interface can replace existing permissions, which can be
+# problematic if the existing permissions are not known or documented (and even if they
+# are known or documented, it can be time-consuming and disruptive to business to re-
+# apply them).
 #
-# Version 1.1.20250115.0
+# Version 2.0.20250116.0
 
 #region License ####################################################################
 # Copyright (c) 2025 Frank Lesniak
@@ -164,7 +247,7 @@ param (
     [string]$NameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = 'Administrators',
     [string]$NameOfBuiltInAdministratorsGroupAccordingToGetAcl = 'BUILTIN\Administrators',
     [string]$NameOfSYSTEMAccountAccordingToTakeOwnAndICacls = 'SYSTEM',
-    [string]$NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM',
+    [string]$NameOfSYSTEMAccountAccordingToGetAcl = 'NT AUTHORITY\SYSTEM',
     [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = '',
     [string]$NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = '',
     [string]$NameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = '',
@@ -252,7 +335,7 @@ function Repair-NTFSPermissionsRecursively {
     # when applying permissions using icacls.exe. If a reference is not specified, the
     # script will use 'SYSTEM'.
     #
-    # .PARAMETER ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl
+    # .PARAMETER ReferenceToNameOfSYSTEMAccountAccordingToGetAcl
     # This parameter is optional; if supplied, it is a memory reference (pointer) to a
     # string containing the name of the SYSTEM account. Supplying this parameter may be
     # necessary on non-English systems, where the name of the SYSTEM account may be
@@ -426,7 +509,7 @@ function Repair-NTFSPermissionsRecursively {
     # that indicates the current recursion depth. If not supplied, the parameter
     # defaults to 0.
     #
-    # Version: 2.1.20250115.0
+    # Version: 3.0.20250116.0
 
     #region License ############################################################
     # Copyright (c) 2025 Frank Lesniak
@@ -460,7 +543,7 @@ function Repair-NTFSPermissionsRecursively {
         [string]$ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls = [ref]$null,
         [string]$ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl = [ref]$null,
         [string]$ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = [ref]$null,
-        [string]$ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl = [ref]$null,
+        [string]$ReferenceToNameOfSYSTEMAccountAccordingToGetAcl = [ref]$null,
         [string]$ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$null,
         [string]$ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl = [ref]$null,
         [string]$ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls = [ref]$null,
@@ -6697,11 +6780,11 @@ function Repair-NTFSPermissionsRecursively {
         $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls = $ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls
     }
 
-    if ($null -eq $ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
-        $NameOfSYSTEMAccountGroupAccordingToGetAcl = 'NT AUTHORITY\SYSTEM'
-        $refNameOfSYSTEMAccountGroupAccordingToGetAcl = [ref]$NameOfSYSTEMAccountGroupAccordingToGetAcl
+    if ($null -eq $ReferenceToNameOfSYSTEMAccountAccordingToGetAcl.Value) {
+        $NameOfSYSTEMAccountAccordingToGetAcl = 'NT AUTHORITY\SYSTEM'
+        $refNameOfSYSTEMAccountAccordingToGetAcl = [ref]$NameOfSYSTEMAccountAccordingToGetAcl
     } else {
-        $refNameOfSYSTEMAccountGroupAccordingToGetAcl = $ReferenceToNameOfSYSTEMAccountGroupAccordingToGetAcl
+        $refNameOfSYSTEMAccountAccordingToGetAcl = $ReferenceToNameOfSYSTEMAccountAccordingToGetAcl
     }
 
     if ($null -eq $ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls.Value) {
@@ -6868,7 +6951,7 @@ function Repair-NTFSPermissionsRecursively {
                     }
                     Write-Verbose -Message $strMessage
                     # Rerun without recursion and with path length ignoring mode enabled
-                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits
+                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits
                     $intFunctionReturn = $intReturnCode
                     return $intFunctionReturn
                     #endregion The parent folder that is under the length limit is the same as the last shortened path
@@ -6889,7 +6972,7 @@ function Repair-NTFSPermissionsRecursively {
                         }
                         Write-Verbose -Message $strMessage
                         # Rerun without recursion and with path length ignoring mode enabled
-                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits
+                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits
                         $intFunctionReturn = $intReturnCode
                         return $intFunctionReturn
                         #endregion The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
@@ -6932,7 +7015,7 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion The drive substitution seems to have failed
                             } else {
                                 #region The drive substitution was successful ######
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                 #endregion The drive substitution was successful ######
                             }
 
@@ -7038,7 +7121,7 @@ function Repair-NTFSPermissionsRecursively {
                                     Write-Error -Message $strMessage
                                     $intReturnCode = -2
                                 } else {
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                 }
 
                                 if ($intReturnCode -lt 0) {
@@ -7181,10 +7264,10 @@ function Repair-NTFSPermissionsRecursively {
                         Write-Verbose -Message $strMessage
                         if ($boolIgnorePathLengthLimits) {
                             # Run in DOS 8.3 path mode and ignore path length limits
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -DOS8dot3PathBeingUsed -IgnorePathLengthLimits
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -DOS8dot3PathBeingUsed -IgnorePathLengthLimits
                         } else {
                             # Run in DOS 8.3 path mode
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -DOS8dot3PathBeingUsed
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strDOS83Path -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -DOS8dot3PathBeingUsed
                         }
                         return $intReturnCode
                         #endregion We got the DOS 8.3 path ############################
@@ -7338,7 +7421,7 @@ function Repair-NTFSPermissionsRecursively {
                         }
                     }
                     #endregion Found an ACE for the Built-In Administrators group #####
-                } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountAccordingToGetAcl.Value) {
                     #region Found an ACE for the SYSTEM account ####################
                     if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                         if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
@@ -7402,9 +7485,9 @@ function Repair-NTFSPermissionsRecursively {
             if ($boolSYSTEMAccountHasSufficientAccess -eq $false) {
                 #region SYSTEM account does not have sufficient access #############
                 if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                 } else {
-                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
+                    $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
                 }
                 Write-Verbose -Message $strMessage
                 # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
@@ -7497,7 +7580,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
                             }
                             #endregion Found an ACE for the Built-In Administrators group
-                        } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                        } elseif ($objThisACE.IdentityReference.Value -eq $refNameOfSYSTEMAccountAccordingToGetAcl.Value) {
                             #region Found an ACE for the SYSTEM account ############
                             if ($objThisACE.AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Allow) {
                                 if ($objThisACE.FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
@@ -7537,7 +7620,7 @@ function Repair-NTFSPermissionsRecursively {
                             #endregion Take ownership using takeown.exe ###############
 
                             # Restart process without recursion flag, repair phase 1
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IterativeRepairState 1
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IterativeRepairState 1
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -7559,7 +7642,7 @@ function Repair-NTFSPermissionsRecursively {
                             # Restart process without recursion flag, phase 2
                             #endregion Take ownership using Set-Acl ###################
 
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IterativeRepairState 2
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IterativeRepairState 2
 
                             if ($intReturnCode -ne 0) {
                                 $intFunctionReturn = $intReturnCode
@@ -7664,7 +7747,7 @@ function Repair-NTFSPermissionsRecursively {
                                     #endregion The drive substitution seems to have failed
                                 } else {
                                     #region The drive substitution was successful
-                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                    $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                     #endregion The drive substitution was successful
                                 }
 
@@ -7772,7 +7855,7 @@ function Repair-NTFSPermissionsRecursively {
                                         Write-Error -Message $strMessage
                                         $intReturnCode = -2
                                     } else {
-                                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                        $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                     }
 
                                     if ($intReturnCode -lt 0) {
@@ -7853,7 +7936,7 @@ function Repair-NTFSPermissionsRecursively {
                                 $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
                             }
                             Write-Verbose -Message $strMessage
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
                             $intFunctionReturn = $intReturnCode
                             return $intFunctionReturn
                             #endregion Try again with IgnorePathLengthLimits enabled ##
@@ -7873,7 +7956,7 @@ function Repair-NTFSPermissionsRecursively {
                                     $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.'
                                 }
                                 Write-Verbose -Message $strMessage
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
                                 $intFunctionReturn = $intReturnCode
                                 return $intFunctionReturn
                                 #endregion The parent folder is a root folder (this is bad, it doesn't get any shorter than this)
@@ -7917,9 +8000,9 @@ function Repair-NTFSPermissionsRecursively {
                                         #region The drive substitution was successful
                                         if ($boolIgnorePathLengthLimits) {
                                             # Run with ignoring path length limits
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits
                                         } else {
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path ($strDriveLetterToUse + ':') '') -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                         }
                                         #endregion The drive substitution was successful
                                     }
@@ -8027,7 +8110,7 @@ function Repair-NTFSPermissionsRecursively {
                                             Write-Error -Message $strMessage
                                             $intReturnCode = -2
                                         } else {
-                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
+                                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $strJoinedPath -LastShortenedPath (Join-Path 'C:' $strSymbolicLinkFolderName) -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth
                                         }
 
                                         if ($intReturnCode -lt 0) {
@@ -8096,9 +8179,9 @@ function Repair-NTFSPermissionsRecursively {
 
                             # Pass-through temporary path length ignoring mode
                             if ($boolIgnorePathLengthLimits) {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1) -RunWithoutRecursion -IgnorePathLengthLimits
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1) -RunWithoutRecursion -IgnorePathLengthLimits
                             } else {
-                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1) -RunWithoutRecursion
+                                $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1) -RunWithoutRecursion
                             }
                             if ($intReturnCode -ne 0) {
                                 if ($objDirectoryOrFileInfoChild.FullName -ne $strNewRealPath) {
@@ -8121,7 +8204,7 @@ function Repair-NTFSPermissionsRecursively {
                             # recursive function
                             $strNewRealPath = Join-Path -Path ($refToRealPath.Value) -ChildPath $objDirectoryOrFileInfoChild.Name
 
-                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountGroupAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1)
+                            $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath ($objDirectoryOrFileInfoChild.FullName) -LastShortenedPath $LastShortenedPath -RealPath $strNewRealPath -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -RecursionDepth ($RecursionDepth + 1)
                             if ($intReturnCode -ne 0) {
                                 if ($objDirectoryOrFileInfoChild.FullName -ne $strNewRealPath) {
                                     $strMessage = 'There was an issue processing the path "' + $objDirectoryOrFileInfoChild.FullName + '" (real path: "' + $strNewRealPath + '") The error code returned was: ' + $intReturnCode
@@ -8245,6 +8328,11 @@ function Repair-NTFSPermissionsRecursively {
             }
             #endregion This object is a file
         }
+        $boolBuiltInAdministratorsNonInheritedNonInheritableACEFound = $false
+        $boolSYSTEMNonInheritedNonInheritableACEFound = $false
+        $boolAdditionalAdministratorAccountNonInheritedNonInheritableACEFound = $false
+        $boolAdditionalReadOnlyAccountNonInheritedNonInheritableACEFound = $false
+        $intExistingReadOnlyAccountNonInheritedNonInheritableFileSystemRights = 0
         #endregion Initialize action tags for each type of ACE ########################
 
         #region Look for ACEs that need to be removed, or that already exist (and don't need to be added)
@@ -8443,6 +8531,7 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                         #region Found a non-inherited allow ACE for the built-in Administrators group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                         $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
                                         if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                                             $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                         } else {
@@ -8453,6 +8542,7 @@ function Repair-NTFSPermissionsRecursively {
                                                 $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                             }
                                         }
+
                                         if ($boolThisACEHasTheRequiredAmountOfPermissions) {
                                             #region Found a non-inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
                                             # Check inheritable ACE settings
@@ -8460,6 +8550,12 @@ function Repair-NTFSPermissionsRecursively {
                                             $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
                                             if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
                                                 $boolBuiltInAdministratorsInheritableACENeedsToBeApplied = $false
+                                            } else {
+                                                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                                                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                    $boolBuiltInAdministratorsNonInheritedNonInheritableACEFound = $true
+                                                }
                                             }
                                             #endregion Found a non-inherited allow ACE on a folder object that grants full control to the built-in Administrators group, and either no permissions on this object are inherited, or we're at the root of the process
                                         }
@@ -8473,7 +8569,7 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion Found a non-inherited allow ACE for the built-in Administrators group
                             }
                             #endregion Found a non-inherited ACE for the Built-In Administrators group
-                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountAccordingToGetAcl.Value) {
                             #region Found a non-inherited ACE for the SYSTEM account
                             if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 #region Found a non-inherited deny ACE for the SYSTEM account
@@ -8535,6 +8631,7 @@ function Repair-NTFSPermissionsRecursively {
                                     if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                         #region Found a non-inherited allow ACE for the SYSTEM account on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                         $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
                                         if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                                             $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                         } else {
@@ -8545,6 +8642,7 @@ function Repair-NTFSPermissionsRecursively {
                                                 $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                             }
                                         }
+
                                         if ($boolThisACEHasTheRequiredAmountOfPermissions) {
                                             #region Found a non-inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
                                             # Check inheritable ACE settings
@@ -8552,6 +8650,12 @@ function Repair-NTFSPermissionsRecursively {
                                             $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
                                             if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
                                                 $boolSYSTEMInheritableACENeedsToBeApplied = $false
+                                            } else {
+                                                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                                                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                    $boolSYSTEMNonInheritedNonInheritableACEFound = $true
+                                                }
                                             }
                                             #endregion Found a non-inherited allow ACE on a folder object that grants full control to the SYSTEM account, and either no permissions on this object are inherited, or we're at the root of the process
                                         }
@@ -8622,6 +8726,7 @@ function Repair-NTFSPermissionsRecursively {
                                                 if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
                                                     #region Found a non-inherited allow ACE for the additional administrator account/group on a folder object and either no permissions on this folder are inherited, or we're at the root of the process
                                                     $boolThisACEHasTheRequiredAmountOfPermissions = $false
+
                                                     if (($arrWorkingACEs[$intCounterA]).FileSystemRights -eq [System.Security.AccessControl.FileSystemRights]::FullControl) {
                                                         $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                                     } else {
@@ -8632,6 +8737,7 @@ function Repair-NTFSPermissionsRecursively {
                                                             $boolThisACEHasTheRequiredAmountOfPermissions = $true
                                                         }
                                                     }
+
                                                     if ($boolThisACEHasTheRequiredAmountOfPermissions) {
                                                         #region Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group, and either no permissions on this object are inherited, or we're at the root of the process
                                                         # Check inheritable ACE settings
@@ -8639,6 +8745,12 @@ function Repair-NTFSPermissionsRecursively {
                                                         $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
                                                         if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
                                                             $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
+                                                        } else {
+                                                            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                                                            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                            if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                                $boolAdditionalAdministratorAccountNonInheritedNonInheritableACEFound = $true
+                                                            }
                                                         }
                                                         #endregion Found a non-inherited allow ACE on a folder object that grants full control to the additional administrator account/group, and either no permissions on this object are inherited, or we're at the root of the process
                                                     }
@@ -8654,7 +8766,17 @@ function Repair-NTFSPermissionsRecursively {
                                                     # folders), this object will get
                                                     # the required account permission
                                                     # assigned
+                                                    #
+                                                    # In this case, we do not want to
+                                                    # create an ACE. But this is
+                                                    # already set above
                                                     #endregion Found a non-inherited allow ACE for the additional administrator account/group on a folder object with inherited permissions that is not at the root of the process
+                                                }
+
+                                                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                                                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                    $boolAdditionalAdministratorAccountNonInheritedNonInheritableACEFound = $true
                                                 }
                                                 #endregion Found a non-inherited allow ACE for the additional administrator account/group on a folder object
                                             } else {
@@ -8856,6 +8978,19 @@ function Repair-NTFSPermissionsRecursively {
                                                         #endregion Found a non-inherited allow ACE on a file with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
                                                     }
                                                     #endregion Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group and either no permissions on this folder are inherited, or we're at the root of the process
+                                                } else {
+                                                    #region Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group, permissions on this folder are inherited, and we're not at the root of the process
+                                                    # In this case, we do not want to
+                                                    # create an ACE. But this is
+                                                    # already set above
+                                                    #endregion Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group, permissions on this folder are inherited, and we're not at the root of the process
+                                                }
+
+                                                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                                                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                                                if (($arrWorkingACEs[$intCounterA]).InheritanceFlags -eq $inheritanceFlags -and ($arrWorkingACEs[$intCounterA]).PropagationFlags -eq $propagationFlags) {
+                                                    $intExistingReadOnlyAccountNonInheritedNonInheritableFileSystemRights = ($arrWorkingACEs[$intCounterA]).FileSystemRights
+                                                    $boolAdditionalReadOnlyAccountNonInheritedNonInheritableACEFound = $true
                                                 }
                                                 #endregion Found a non-inherited allow ACE with at least read & execute permissions for the additional read-only account/group
                                             }
@@ -8997,7 +9132,7 @@ function Repair-NTFSPermissionsRecursively {
                                 #endregion Found an inherited allow ACE for the built-in Administrators group
                             }
                             #endregion Found an inherited ACE for the built-in Administrators group
-                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value) {
+                        } elseif (($arrWorkingACEs[$intCounterA]).IdentityReference.Value -eq $refNameOfSYSTEMAccountAccordingToGetAcl.Value) {
                             #region Found an inherited ACE for the SYSTEM account ##
                             if (($arrWorkingACEs[$intCounterA]).AccessControlType -eq [System.Security.AccessControl.AccessControlType]::Deny) {
                                 #region Found an inherited deny ACE for the SYSTEM account
@@ -9291,155 +9426,315 @@ function Repair-NTFSPermissionsRecursively {
         #endregion Look for ACEs that need to be removed, or that already exist (and don't need to be added)
 
         if ($boolBuiltInAdministratorsInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value
             #region An inheritable ACE needs to be applied here for the built-in Administrators group
-            if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-            } else {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
-            }
-            Write-Verbose -Message $strMessage
-            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
-            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
-            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
-            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
-            if ($boolSuccess -eq $false) {
-                #region Access rule addition failed ################################
+            $strPrincipal = $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value
+
+            $boolIssueWithRemovalOccurred = $false
+            if ($boolBuiltInAdministratorsNonInheritedNonInheritableACEFound) {
+                # Need to remove the non-inherited, non-inheritable ACE first
                 if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                 } else {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '".'
                 }
-                Write-Warning -Message $strMessage
-                #endregion Access rule addition failed ################################
-            } else {
-                #region Access rule addition was successful #####
-                # Test to see if permissions were added by comparing the ACE count
-                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
-                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                    #region Permissions confirmed added based on change in ACE count
-                    Write-Verbose ('...the permission was added...')
-                    $intLastNumberOfItems = $intCurrentNumberOfItems
-                    $boolACLChangeMade = $true
-                    #endregion Permissions confirmed added based on change in ACE count
-                } else {
-                    #region Based on no change in ACE count, permissions were not added
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToRemove = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToRemove)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule removal failed #############################
+                    $boolIssueWithRemovalOccurred = $true
                     if ($WorkingPath -ne $refToRealPath.Value) {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                     } else {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
                     }
                     Write-Warning -Message $strMessage
-                    #endregion Based on no change in ACE count, permissions were not added
+                    #endregion Access rule removal failed #############################
+                } else {
+                    #region Access rule removal was successful #####################
+                    # Test to see if permissions were removed by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed removed based on change in ACE count
+                        Write-Verbose ('...the permission was removed...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed removed based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not removed
+                        $boolIssueWithRemovalOccurred = $true
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not removed
+                    }
+                    #endregion Access rule removal was successful #####################
                 }
-                #endregion Access rule addition was successful #####
+            }
+
+            if (-not $boolIssueWithRemovalOccurred) {
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule addition failed ################################
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
+                    #endregion Access rule addition failed ################################
+                } else {
+                    #region Access rule addition was successful #####
+                    # Test to see if permissions were added by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed added based on change in ACE count
+                        Write-Verbose ('...the permission was added...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed added based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not added
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not added
+                    }
+                    #endregion Access rule addition was successful #####
+                }
             }
             #endregion An inheritable ACE needs to be applied here for the built-in Administrators group
         }
 
         if ($boolSYSTEMInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfSYSTEMAccountGroupAccordingToGetAcl.Value
             #region An inheritable ACE needs to be applied here for the SYSTEM account
-            if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-            } else {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
-            }
-            Write-Verbose -Message $strMessage
-            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
-            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
-            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
-            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
-            if ($boolSuccess -eq $false) {
-                #region Access rule addition failed ################################
+            $strPrincipal = $refNameOfSYSTEMAccountAccordingToGetAcl.Value
+
+            $boolIssueWithRemovalOccurred = $false
+            if ($boolSYSTEMNonInheritedNonInheritableACEFound) {
+                # Need to remove the non-inherited, non-inheritable ACE first
                 if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                 } else {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '".'
                 }
-                Write-Warning -Message $strMessage
-                #endregion Access rule addition failed ################################
-            } else {
-                #region Access rule addition was successful #####
-                # Test to see if permissions were added by comparing the ACE count
-                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
-                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                    #region Permissions confirmed added based on change in ACE count
-                    Write-Verbose ('...the permission was added...')
-                    $intLastNumberOfItems = $intCurrentNumberOfItems
-                    $boolACLChangeMade = $true
-                    #endregion Permissions confirmed added based on change in ACE count
-                } else {
-                    #region Based on no change in ACE count, permissions were not added
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToRemove = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToRemove)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule removal failed #############################
+                    $boolIssueWithRemovalOccurred = $true
                     if ($WorkingPath -ne $refToRealPath.Value) {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                     } else {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
                     }
                     Write-Warning -Message $strMessage
-                    #endregion Based on no change in ACE count, permissions were not added
+                    #endregion Access rule removal failed #############################
+                } else {
+                    #region Access rule removal was successful #####################
+                    # Test to see if permissions were removed by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed removed based on change in ACE count
+                        Write-Verbose ('...the permission was removed...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed removed based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not removed
+                        $boolIssueWithRemovalOccurred = $true
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not removed
+                    }
+                    #endregion Access rule removal was successful #####################
                 }
-                #endregion Access rule addition was successful #####
+            }
+
+            if (-not $boolIssueWithRemovalOccurred) {
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule addition failed ################################
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
+                    #endregion Access rule addition failed ################################
+                } else {
+                    #region Access rule addition was successful #####
+                    # Test to see if permissions were added by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed added based on change in ACE count
+                        Write-Verbose ('...the permission was added...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed added based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not added
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not added
+                    }
+                    #endregion Access rule addition was successful #####
+                }
             }
             #endregion An inheritable ACE needs to be applied here for the SYSTEM account
         }
 
         if ($boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
             #region An inheritable ACE needs to be applied here for the additional administrator account/group
-            if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-            } else {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
-            }
-            Write-Verbose -Message $strMessage
-            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
-            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
-            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
-            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
-            if ($boolSuccess -eq $false) {
-                #region Access rule addition failed ################################
+            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
+
+            $boolIssueWithRemovalOccurred = $false
+            if ($boolAdditionalAdministratorAccountNonInheritedNonInheritableACEFound) {
+                # Need to remove the non-inherited, non-inheritable ACE first
                 if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                 } else {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with full control from the following folder. The path is "' + $WorkingPath + '".'
                 }
-                Write-Warning -Message $strMessage
-                #endregion Access rule addition failed ################################
-            } else {
-                #region Access rule addition was successful #####
-                # Test to see if permissions were added by comparing the ACE count
-                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
-                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                    #region Permissions confirmed added based on change in ACE count
-                    Write-Verbose ('...the permission was added...')
-                    $intLastNumberOfItems = $intCurrentNumberOfItems
-                    $boolACLChangeMade = $true
-                    #endregion Permissions confirmed added based on change in ACE count
-                } else {
-                    #region Based on no change in ACE count, permissions were not added
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToRemove = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToRemove)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule removal failed #############################
+                    $boolIssueWithRemovalOccurred = $true
                     if ($WorkingPath -ne $refToRealPath.Value) {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                     } else {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
                     }
                     Write-Warning -Message $strMessage
-                    #endregion Based on no change in ACE count, permissions were not added
+                    #endregion Access rule removal failed #############################
+                } else {
+                    #region Access rule removal was successful #####################
+                    # Test to see if permissions were removed by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed removed based on change in ACE count
+                        Write-Verbose ('...the permission was removed...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed removed based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not removed
+                        $boolIssueWithRemovalOccurred = $true
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with full control to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not removed
+                    }
+                    #endregion Access rule removal was successful #####################
                 }
-                #endregion Access rule addition was successful #####
+            }
+
+            if (-not $boolIssueWithRemovalOccurred) {
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::FullControl
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule addition failed ################################
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
+                    #endregion Access rule addition failed ################################
+                } else {
+                    #region Access rule addition was successful #####
+                    # Test to see if permissions were added by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed added based on change in ACE count
+                        Write-Verbose ('...the permission was added...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed added based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not added
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not added
+                    }
+                    #endregion Access rule addition was successful #####
+                }
             }
             #endregion An inheritable ACE needs to be applied here for the additional administrator account/group
         }
 
         if ($boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
             #region A non-inheritable ACE needs to be applied here for the additional administrator account/group
+            $strPrincipal = $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value
+
             if ($WorkingPath -ne $refToRealPath.Value) {
                 $strMessage = 'Adding ACE for ' + $strPrincipal + ' with full control to the following file. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
             } else {
@@ -9487,57 +9782,110 @@ function Repair-NTFSPermissionsRecursively {
         }
 
         if ($boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
             #region An inheritable ACE needs to be applied here for the additional read-only account/group
-            if ($WorkingPath -ne $refToRealPath.Value) {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
-            } else {
-                $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
-            }
-            Write-Verbose -Message $strMessage
-            $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
-            $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-            $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
-            $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
-            $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
-            $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
-            if ($boolSuccess -eq $false) {
-                #region Access rule addition failed ################################
+            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
+
+            $boolIssueWithRemovalOccurred = $false
+            if ($boolAdditionalAdministratorAccountNonInheritedNonInheritableACEFound) {
+                # Need to remove the non-inherited, non-inheritable ACE first
                 if ($WorkingPath -ne $refToRealPath.Value) {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with read and execute permissions from the following folder. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                 } else {
-                    $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    $strMessage = 'Removing non-inherited, non-inheritable ACE for ' + $strPrincipal + ' with read and execute permissions from the following folder. The path is "' + $WorkingPath + '".'
                 }
-                Write-Warning -Message $strMessage
-                #endregion Access rule addition failed ################################
-            } else {
-                #region Access rule addition was successful #####
-                # Test to see if permissions were added by comparing the ACE count
-                $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
-                if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
-                    #region Permissions confirmed added based on change in ACE count
-                    Write-Verbose ('...the permission was added...')
-                    $intLastNumberOfItems = $intCurrentNumberOfItems
-                    $boolACLChangeMade = $true
-                    #endregion Permissions confirmed added based on change in ACE count
-                } else {
-                    #region Based on no change in ACE count, permissions were not added
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = $intExistingReadOnlyAccountNonInheritedNonInheritableFileSystemRights
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::None
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToRemove = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToRemove)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule removal failed #############################
+                    $boolIssueWithRemovalOccurred = $true
                     if ($WorkingPath -ne $refToRealPath.Value) {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
                     } else {
-                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder. Remove-SpecificAccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
                     }
                     Write-Warning -Message $strMessage
-                    #endregion Based on no change in ACE count, permissions were not added
+                    #endregion Access rule removal failed #############################
+                } else {
+                    #region Access rule removal was successful #####################
+                    # Test to see if permissions were removed by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed removed based on change in ACE count
+                        Write-Verbose ('...the permission was removed...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed removed based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not removed
+                        $boolIssueWithRemovalOccurred = $true
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to remove ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder. The ACE count indicates that it was not removed successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not removed
+                    }
+                    #endregion Access rule removal was successful #####################
                 }
-                #endregion Access rule addition was successful #####
+            }
+
+            if (-not $boolIssueWithRemovalOccurred) {
+                if ($WorkingPath -ne $refToRealPath.Value) {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                } else {
+                    $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following folder, and all subfolders and files. The path is "' + $WorkingPath + '".'
+                }
+                Write-Verbose -Message $strMessage
+                $fileSystemRights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [System.Security.AccessControl.FileSystemRights]::Synchronize
+                $inheritanceFlags = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+                $propagationFlags = [System.Security.AccessControl.PropagationFlags]::None
+                $accessControlType = [System.Security.AccessControl.AccessControlType]::Allow
+                $objAccessRuleToAdd = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $strPrincipal, $fileSystemRights, $inheritanceFlags, $propagationFlags, $accessControlType
+                $boolSuccess = Add-AccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]$objAccessRuleToAdd)
+                if ($boolSuccess -eq $false) {
+                    #region Access rule addition failed ################################
+                    if ($WorkingPath -ne $refToRealPath.Value) {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                    } else {
+                        $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. Add-AccessRuleRobust returned an error indicator. successfully The path is "' + $WorkingPath + '".'
+                    }
+                    Write-Warning -Message $strMessage
+                    #endregion Access rule addition failed ################################
+                } else {
+                    #region Access rule addition was successful #####
+                    # Test to see if permissions were added by comparing the ACE count
+                    $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
+                    if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
+                        #region Permissions confirmed added based on change in ACE count
+                        Write-Verbose ('...the permission was added...')
+                        $intLastNumberOfItems = $intCurrentNumberOfItems
+                        $boolACLChangeMade = $true
+                        #endregion Permissions confirmed added based on change in ACE count
+                    } else {
+                        #region Based on no change in ACE count, permissions were not added
+                        if ($WorkingPath -ne $refToRealPath.Value) {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
+                        } else {
+                            $strMessage = 'Failed to add ACE for ' + $strPrincipal + ' with full control to the following folder, and all subfolders and files. The ACE count indicates that it was not added successfully. The path is "' + $WorkingPath + '".'
+                        }
+                        Write-Warning -Message $strMessage
+                        #endregion Based on no change in ACE count, permissions were not added
+                    }
+                    #endregion Access rule addition was successful #####
+                }
             }
             #endregion An inheritable ACE needs to be applied here for the additional read-only account/group
         }
 
         if ($boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied) {
-            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
             #region A non-inheritable ACE needs to be applied here for the additional read-only account/group
+            $strPrincipal = $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value
             if ($WorkingPath -ne $refToRealPath.Value) {
                 $strMessage = 'Adding ACE for ' + $strPrincipal + ' with read and execute permissions to the following file. The path is "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '").'
             } else {
