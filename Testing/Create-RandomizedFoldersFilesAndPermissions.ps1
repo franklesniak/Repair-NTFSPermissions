@@ -15,19 +15,19 @@
 # ---------------------------
 
 # Maximum depth of nested folders.
-$maxDepth = 10
+$maxDepth = 35
 
 # Number of folders to create at each level.
-$foldersPerLevel = 3
+$foldersPerLevel = 1
 
 # Number of files to create in each folder.
-$filesPerFolder = 2
+$filesPerFolder = 30
 
 # Probability (0 to 1) of breaking inheritance in any given folder.
-$breakInheritanceChance = 0.3
+$breakInheritanceChance = 0.2
 
 # Probability of adding an additional ACE when NOT breaking inheritance.
-$addAceChance = 0.3
+$addAceChance = 0.4
 
 # Whether to create up to five local accounts.
 $createLocalAccounts = $true

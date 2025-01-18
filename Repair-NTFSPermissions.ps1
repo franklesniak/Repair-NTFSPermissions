@@ -6839,7 +6839,7 @@ function Repair-NTFSPermissionsRecursively {
     #endregion Process Switch Parameters ##############################################
     #endregion Process Input ##########################################################
 
-    # TODO: Add real path info here
+    #region Display starting message ###############################################
     if ($null -eq $ReferenceToHashtableOfKnownSIDs) {
         if ($WorkingPath -ne $refToRealPath.Value) {
             $strMessage = 'Now starting Repair-NTFSPermissionsRecursively with the following parameters: Real path: "' + $refToRealPath.Value + '"; Working path: "' + $WorkingPath + '"; Allow recursion: ' + $boolAllowRecursion + '; Iterative repair state: ' + $IterativeRepairState + '; Use Get-Path workaround: ' + $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful.Value + '; Last shortened working path: "' + $LastShortenedPath + '"; Ignore path length limits: ' + $boolIgnorePathLengthLimits + '; Relaunch attempted with DOS 8.3 path: ' + $boolDOS8dot3PathBeingUsed + '; Known SIDs: not specified (unresolved SIDs will not be removed); Recursion depth :' + [string]$RecursionDepth
@@ -6862,6 +6862,7 @@ function Repair-NTFSPermissionsRecursively {
         }
     }
     Write-Verbose -Message $strMessage
+    #endregion Display starting message ###############################################
 
     # $IterativeRepairState:
     # 0 = Allow recursion (default)
@@ -6880,7 +6881,7 @@ function Repair-NTFSPermissionsRecursively {
     # We don't know if $WorkingPath is pointing to a folder or a file, so use the folder
     # (shorter) length limit
     if ($WorkingPath.Length -ge $FOLDERPATHLIMIT -and $boolIgnorePathLengthLimits -ne $true) {
-        #region Path Length Exceeds Limit ##########################################
+        #region Path length exceeds limit; mitigate and restart the process ########
         if ($WorkingPath -ne $refToRealPath.Value) {
             $strMessage = $WorkingPath + ' (real path: "' + $refToRealPath.Value + '") is too long.'
         } else {
@@ -7201,7 +7202,7 @@ function Repair-NTFSPermissionsRecursively {
             }
             #endregion Running Normally (Not In Iterative Repair State); Recursion Allowed
         }
-        #endregion Path Length Exceeds Limit ##########################################
+        #endregion Path length exceeds limit; mitigate and restart the process ########
     } else {
         #region Path is not too long, or the function was called with "IgnorePathLengthLimits"
         $boolCriticalErrorOccurred = $false
@@ -7209,7 +7210,7 @@ function Repair-NTFSPermissionsRecursively {
         $boolSuccess = Get-AclSafely -ReferenceToACL ([ref]$objThisObjectPermission) -ReferenceToInfoObject ([ref]$objThis) -PathToObject $WorkingPath -PSVersion $versionPS
 
         if ($boolSuccess -eq $false) {
-            #region An error occurred reading the ACL ##############################
+            #region An error occurred reading the ACL; mitigate and restart the process if possible
 
             #region Take ownership #################################################
             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -7276,36 +7277,11 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 #endregion Still unable to read permissions after running takeown.exe #
             }
-            #endregion An error occurred reading the ACL ##############################
+            #endregion An error occurred reading the ACL; mitigate and restart the process if possible
         } else {
             #region Able to read the ACL (permissions) of the item #################
-
-            # TODO: Review this more closely; I don't believe this is necessary
-            # anymore because Get-AclSafely now returns the permission object
-            # without needing to copy it
-            # if ($versionPS -eq ([version]'1.0')) {
-            #     # The object returned from Get-Acl is not copy-able on PowerShell 1.0
-            #     # Not sure why...
-            #     # So, we need to get the ACL directly and hope that we don't have an error this time
-            #     if ($WorkingPath.Contains('[') -or $WorkingPath.Contains(']') -or $WorkingPath.Contains('`')) {
-            #         # PowerShell v1
-            #         # GetAccessControl() does not work and returns $null on PowerShell v1 for some reason
-            #         # So, we need to use Get-Acl
-            #         #
-            #         # Unfortunately, there does not seem to be any way to escape a left
-            #         # square bracket in a path passed to Get-Acl. But those paths
-            #         # should have already thrown an error - so we stick with only
-            #         # escaping a grave accent mark/backtick.
-            #         $objThisObjectPermission = Get-Acl -Path ($WorkingPath.Replace('`', '``'))
-            #     } else {
-            #         # No square brackets; use Get-Acl
-            #         $objThisObjectPermission = Get-Acl -Path $WorkingPath
-            #     }
-            # }
-
             if ($null -eq $objThisObjectPermission) {
-                #region An error did not occur retrieving permissions; however no permissions were retrieved
-                # Either Get-Acl did not work as expected, or there are in fact no access control entries on the object
+                #region An error did not occur retrieving permissions; however no permissions were retrieved - Get-Acl did not work as expected. Mitigate and restart the process if possible
 
                 #region Take ownership #############################################
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
@@ -7345,13 +7321,14 @@ function Repair-NTFSPermissionsRecursively {
                     }
                     #endregion The script was able to read permissions after taking ownership
                 }
-                #endregion An error did not occur retrieving permissions; however no permissions were retrieved
+                #endregion An error did not occur retrieving permissions; however no permissions were retrieved - Get-Acl did not work as expected. Mitigate and restart the process if possible
             }
             #endregion Able to read the ACL (permissions) of the item #################
         }
 
         if ($boolCriticalErrorOccurred -eq $false) {
             #region We were able to read the permissions on the object - or, potentially, the object has an empty ACL
+            #region Complete initialization of variables for processing ############
             if ($null -eq $objThis) {
                 #region The System.IO.DirectoryInfo or System.IO.FileInfo object was null after retrieving the ACL
                 if ($WorkingPath.Contains('[') -or $WorkingPath.Contains(']') -or $WorkingPath.Contains('`')) {
@@ -7399,7 +7376,9 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 #endregion The permissions object was not null
             }
+            #endregion Complete initialization of variables for processing ############
 
+            #region Check if Built-In Administrators group and SYSTEM account have sufficient access
             $boolBuiltInAdministratorsHaveSufficientAccess = $false
             $boolSYSTEMAccountHasSufficientAccess = $false
 
@@ -7439,7 +7418,9 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 #endregion Looping through each access control entry (ACE) in the ACL
             }
+            #endregion Check if Built-In Administrators group and SYSTEM account have sufficient access
 
+            #region Grant permission to built-in Administrators group and SYSTEM account if necessary
             if ($boolBuiltInAdministratorsHaveSufficientAccess -eq $false -or $boolSYSTEMAccountHasSufficientAccess -eq $false) {
                 $boolPermissionAdjustmentNecessary = $true
                 if ($WorkingPath -ne $refToRealPath.Value) {
@@ -7669,12 +7650,13 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 #endregion Permissions adjustments were attempted; re-read permissions to verify they are now correct
             }
+            #endregion Grant permission to built-in Administrators group and SYSTEM account if necessary
             #endregion We were able to read the permissions on the object - or, potentially, the object has an empty ACL
         }
 
         #region We've theoretically repaired permissions on the object #############
         if ($objThis.PSIsContainer) {
-            #region This object is a folder, not a file ############################
+            #region This object is a folder, not a file; process all files in this folder and then recursively process all subfolders
 
             if ($boolAllowRecursion -eq $true) {
                 #region Recursion is allowed #######################################
@@ -8222,7 +8204,7 @@ function Repair-NTFSPermissionsRecursively {
                 }
                 #endregion Recursion is allowed #######################################
             }
-            #endregion This object is a folder, not a file ############################
+            #endregion This object is a folder, not a file; process all files in this folder and then recursively process all subfolders
         }
 
         #region Programmatically Change Permissions via PowerShell #################
