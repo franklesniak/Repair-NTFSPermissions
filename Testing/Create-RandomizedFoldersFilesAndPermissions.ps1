@@ -44,10 +44,10 @@ $testUserPassword = 'P@ssw0rd123!'
 # - ` = grave accent/backtick
 # Feel free to add or remove characters as needed.
 $specialChars = @(
-    [char]8220, # “
-    [char]8221, # ”
-    [char]8222, # „
-    '`',        # backtick
+    [char]8220,
+    [char]8221,
+    [char]8222,
+    '`',
     '$',
     '💯',
     '華',

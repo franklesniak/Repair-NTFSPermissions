@@ -8826,18 +8826,22 @@ function Repair-NTFSPermissionsRecursively {
                 $boolSYSTEMInheritableACENeedsToBeApplied = $false
                 $boolAdditionalAdministratorAccountInheritableACENeedsToBeApplied = $false
 
+                $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
                 if ([string]::IsNullOrEmpty($refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                    $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $true
-                } else {
-                    $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $false
+                    if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
+                        # This object is a file and either it is not inheriting any permissions, or we are at the root of the process
+                        $boolAdditionalAdministratorAccountNonInheritableACENeedsToBeApplied = $true
+                    }
                 }
 
                 $boolAdditionalReadOnlyAccountInheritableACENeedsToBeApplied = $false
 
+                $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
                 if ([string]::IsNullOrEmpty($refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl.Value) -eq $false) {
-                    $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $true
-                } else {
-                    $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $false
+                    if ($boolPermissionsNotInherited -or ($RecursionDepth -eq 0)) {
+                        # This object is a file and either it is not inheriting any permissions, or we are at the root of the process
+                        $boolAdditionalReadOnlyAccountNonInheritableACENeedsToBeApplied = $true
+                    }
                 }
                 #endregion This object is a file
             }
