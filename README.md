@@ -2,6 +2,8 @@
 
 Scans NTFS permissions and ensures that BUILTIN\Administrators and NT AUTHORITY\SYSTEM have full control of every file and folder.
 
+Optionally, can remove unresolved ("dead") security identifiers (SIDs).
+
 ## Motivation
 
 Performing administrative activities such as file server migrations, content assessments/scanning, or even basic create/remove/update/delete (CRUD) operations can be impeded if an administrator does not have the required permissions.
@@ -70,12 +72,12 @@ If not, the script takes ownership of just the current object and tries again.
 And if it still fails, it takes ownership via an alternative method and tries again.
 
 Additionally, my script handles long paths by first attempting a drive substitution (via subst.exe).
-If that fails for any reason, it uses a symbolic link instead.
+If that fails for any reason, it uses a symbolic link instead, and will try a DOS 8.3 path if the symbolic link still fails.
 When processing of a long path is completed, the script cleans up the drive substitution or symbolic link.
 
 ## Requirements
 
-The script requires PowerShell 2.0 or above - but it can be made to work on PowerShell 1.0 with some modifications (removal of comment-based help and parameters, and instead hard-coding the parameters to a variable assignment).
+The script requires PowerShell 2.0 or above - but it can be made to work on PowerShell 1.0 with some modifications (namely the removal of `[CmdletBinding()]`).
 
 The script must be run with administrative rights.
 Open PowerShell as an administrator, then run the script.
@@ -87,7 +89,7 @@ One way to do this is:
 
 ### PowerShell 1.0 Limitations
 
-As noted previously, PowerShell 1.0 requires some script modifications (removal of comment-based help, parameters, and instead hard-coding the parameters to a variable assignment).
+As noted previously, PowerShell 1.0 requires the removal of `[CmdletBinding()]`.
 
 Additionally, PowerShell 1.0 does not understand a script execution policy of "Bypass", nor does it understand the concept of a scoped execution policy.
 To work around this problem, use a command like:
@@ -102,6 +104,22 @@ To run the script, type:
 
 Replace the path `E:\Shares\Human Resources` with the path that you want to ensure Administrators and SYSTEM have permission to.
 
+## Logging
+
+The script does not yet have built-in logging capabilities.
+In the meantime, the script author recommends turning on script transcription and enabling Verbose output.
+Debug output is also available.
+
+To run the script with Verbose output and capture a log, run commands like the following:
+
+```powershell
+Start-Transcript -Path 'C:\NTFSPermissionsRepairLog.txt'
+
+& '.\Repair-NTFSPermissions.ps1' -PathToFix 'E:\Shares\Human Resources' -Verbose
+
+Stop-Transcript
+```
+
 ## Additional Features
 
 The script also contains a feature that allows the removal of unresolved SIDs (i.e., security identifiers that the operating system cannot resolve to a name on the network).
@@ -115,9 +133,15 @@ So, please create a CSV listing every SID in Active Directory (users, computers,
 
 A sample script to generate this CSV for **one Active Directory Domain Services domain** is provided in the included script `Get-AllADDSSIDsForOneDomain.ps1`
 
-With the CSV populated, you can use an alternative command like:
+With the CSV populated, you can use an alternative set of commands like:
 
-`Repair-NTFSPermissions -PathToFix 'E:\Shares\Human Resources' -RemoveUnresolvedSIDs -PathToCSVContainingKnownSIDs 'C:\Users\Public\Documents\KnownSIDs.csv'`
+```powershell
+Start-Transcript -Path 'C:\NTFSPermissionsRepairLog.txt'
+
+& '.\Repair-NTFSPermissions.ps1' -PathToFix 'E:\Shares\Human Resources' -RemoveUnresolvedSIDs -PathToCSVContainingKnownSIDs 'C:\Users\Public\Documents\KnownSIDs.csv'
+
+Stop-Transcript
+```
 
 This will parse the folder structure and ensure that Administrators and SYSTEM have full control - but additionally, it will remove any unresolvable SIDs from the file system.
 
@@ -128,5 +152,15 @@ This is because the Administrators group and the SYSTEM account may be called so
 
 Additionally, there are optional parameters to:
 
-- Specify an additional account to be granted Full Control over the target file/folders
-- Specify an additional account to be granted read-only (read and execute) permission over the target file/folders (experimental and untested)
+- Specify an additional account or group to be granted Full Control over the target file/folders
+- Specify an additional account or group to be granted read-only (read and execute) permission over the target file/folders
+
+For example, to add an additional administrator account/group to a file structure, you may use commands like the following:
+
+```powershell
+Start-Transcript -Path 'C:\NTFSPermissionsRepairLog.txt'
+
+& '.\Repair-NTFSPermissions.ps1' -PathToFix 'E:\Shares\Human Resources' -Verbose -InformationAction ([System.Management.Automation.ActionPreference]::Continue) -NameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls 'DOMAIN\FileServerAdmins' -NameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl 'DOMAIN\FileServerAdmins'
+
+Stop-Transcript
+```
