@@ -6767,7 +6767,7 @@ function Repair-NTFSPermissionsRecursively {
 
     #region Process Input ##########################################################
     if ([string]::IsNullOrEmpty($WorkingPath)) {
-        Write-Warning 'An empty working path was passed to Repair-NTFSPermissionsRecursively; this parameter is required, so the function is terminating.'
+        Write-Error -Message 'An empty working path was passed to Repair-NTFSPermissionsRecursively; this parameter is required, so the function is terminating.'
         return -100
     }
 
@@ -6926,7 +6926,7 @@ function Repair-NTFSPermissionsRecursively {
         } else {
             $strMessage = $WorkingPath + ' is too long.'
         }
-        Write-Verbose -Message $strMessage
+        Write-Debug -Message $strMessage
         if ($IterativeRepairState -ge 1) {
             #region In Iterative Repair State; No Recursion Allowed ################
             if ($WorkingPath -ne $refToRealPath.Value) {
@@ -6989,7 +6989,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
                     }
-                    Write-Verbose -Message $strMessage
+                    Write-Debug -Message $strMessage
                     # Rerun without recursion and with path length ignoring mode enabled
                     if ($boolFinalCleanupOfRedundantACEs) {
                         $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits -FinalCleanupOfRedundantACEs
@@ -7014,7 +7014,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'The path length of item "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link cannot be used to mitigate this because this item''s parent folder is already the root of a drive, so trying again with temporary path length ignoring mode enabled.'
                         }
-                        Write-Verbose -Message $strMessage
+                        Write-Debug -Message $strMessage
                         # Rerun without recursion and with path length ignoring mode enabled
                         if ($boolFinalCleanupOfRedundantACEs) {
                             $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -RunWithoutRecursion -IgnorePathLengthLimits -FinalCleanupOfRedundantACEs
@@ -7058,7 +7058,7 @@ function Repair-NTFSPermissionsRecursively {
                                 } else {
                                     $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
                                 }
-                                Write-Verbose -Message $strMessage
+                                Write-Debug -Message $strMessage
                                 $intReturnCode = -1
                                 #endregion The drive substitution seems to have failed
                             } else {
@@ -7089,7 +7089,7 @@ function Repair-NTFSPermissionsRecursively {
                                 } else {
                                     $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to remove the drive letter (' + $strDriveLetterToUse + ':) failed (please remove the drive manually!): ' + $strCommand
                                 }
-                                Write-Warning -Message $strMessage
+                                Write-Debug -Message $strMessage
                             }
 
                             if ($intReturnCode -eq 0) {
@@ -7270,7 +7270,7 @@ function Repair-NTFSPermissionsRecursively {
             #region Take ownership #################################################
             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
             $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
-            Write-Verbose ('About to run command: ' + $strCommand)
+            Write-Verbose -Message ('About to run command: ' + $strCommand)
             $null = Invoke-Expression $strCommand
             #endregion Take ownership #################################################
 
@@ -7289,7 +7289,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'This may occur if subst.exe was used to mitigate path length issues; if so, the function should retry...'
                     }
-                    Write-Verbose -Message $strMessage
+                    Write-Debug -Message $strMessage
                     $intFunctionReturn = -5
                     return $intFunctionReturn
                     #endregion We're already running using a DOS 8.3 path, and it didn't work
@@ -7306,7 +7306,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script was going to try again with using the DOS 8.3 path. However, the script was unable to get the DOS 8.3 folder/file name.'
                         }
-                        Write-Verbose -Message $strMessage
+                        Write-Error -Message $strMessage
                         $intFunctionReturn = -13
                         return $intFunctionReturn
                         #endregion Unable to get DOS 8.3 path #########################
@@ -7317,7 +7317,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'Despite attempting to take ownership of the folder/file "' + $WorkingPath + '" on behalf of administrators, its permissions still cannot be read. The command used to take ownership was:' + "`n`n" + $strCommand + "`n`n" + 'As a potential workaround, the script is going to try again with using the DOS 8.3 path: ' + $strDOS83Path
                         }
-                        Write-Verbose -Message $strMessage
+                        Write-Debug -Message $strMessage
                         if ($boolIgnorePathLengthLimits) {
                             # Run in DOS 8.3 path mode and ignore path length limits
                             if ($boolFinalCleanupOfRedundantACEs) {
@@ -7349,7 +7349,7 @@ function Repair-NTFSPermissionsRecursively {
                 #region Take ownership #############################################
                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                 $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
-                Write-Verbose ('About to run command: ' + $strCommand)
+                Write-Verbose -Message ('About to run command: ' + $strCommand)
                 $null = Invoke-Expression $strCommand
                 #endregion Take ownership #############################################
 
@@ -7493,7 +7493,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'Permission adjustment necessary for "' + $WorkingPath + '".'
                     }
-                    Write-Verbose -Message $strMessage
+                    Write-Debug -Message $strMessage
                 } else {
                     $boolPermissionAdjustmentNecessary = $false
                 }
@@ -7507,8 +7507,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'The built-in Administrators group ("' + $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
                     }
-                    Write-Verbose -Message $strMessage
-                    # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
+                    Write-Debug -Message $strMessage
                     # Add ACE for administrators
                     $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                     if ($objThis.PSIsContainer) {
@@ -7523,7 +7522,7 @@ function Repair-NTFSPermissionsRecursively {
                         $strCommand += ' 2>&1'
                     }
                     $strAllCommandsInThisSection += "`n" + $strCommand
-                    Write-Verbose ('About to run command: ' + $strCommand)
+                    Write-Verbose -Message ('About to run command: ' + $strCommand)
                     $null = Invoke-Expression $strCommand
                     #endregion Built-In Administrators group does not have sufficient access
                 }
@@ -7535,8 +7534,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'The SYSTEM account ("' + $refNameOfSYSTEMAccountAccordingToGetAcl.Value + '") does not have sufficient access to the folder/file "' + $WorkingPath + '".'
                     }
-                    Write-Verbose -Message $strMessage
-                    # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
+                    Write-Debug -Message $strMessage
                     # Add ACE for SYSTEM
                     $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                     if ($objThis.PSIsContainer) {
@@ -7551,7 +7549,7 @@ function Repair-NTFSPermissionsRecursively {
                         $strCommand += ' 2>&1'
                     }
                     $strAllCommandsInThisSection += "`n" + $strCommand
-                    Write-Verbose ('About to run command: ' + $strCommand)
+                    Write-Verbose -Message ('About to run command: ' + $strCommand)
                     $null = Invoke-Expression $strCommand
                     #endregion SYSTEM account does not have sufficient access #############
                 }
@@ -7652,8 +7650,7 @@ function Repair-NTFSPermissionsRecursively {
                             } else {
                                 $strMessage = 'Despite attempting to apply permissions to the folder/file "' + $WorkingPath + '", the permissions are not present as expected. This can occur because of a lack of ownership over the folder/file.'
                             }
-                            Write-Verbose -Message $strMessage
-                            # Write-Debug ($arrACEs | ForEach-Object { $_.IdentityReference } | Out-String)
+                            Write-Debug -Message $strMessage
                             if ($IterativeRepairState -eq 0) {
                                 #region We are running normally (not in an iterative repair state), so we can try taking ownership of the folder/file
 
@@ -7661,7 +7658,7 @@ function Repair-NTFSPermissionsRecursively {
                                 $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                 $strCommand = 'C:\Windows\System32\takeown.exe /F "' + $strEscapedPathForInvokeExpression + '" /A'
                                 $strCommand += ' 2>&1'
-                                Write-Verbose ('About to run command: ' + $strCommand)
+                                Write-Verbose -Message ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
                                 #endregion Take ownership using takeown.exe ###############
 
@@ -7773,7 +7770,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
                         }
-                        Write-Verbose -Message $strMessage
+                        Write-Debug -Message $strMessage
                         if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
                             #region Non-inherited ACE has an IdentityReference #############
                             if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
@@ -7861,7 +7858,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'Found inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
                         }
-                        Write-Verbose -Message $strMessage
+                        Write-Debug -Message $strMessage
                         if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
                             #region Inherited ACE has an IdentityReference #################
                             if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
@@ -8006,7 +8003,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -8085,7 +8082,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -8131,7 +8128,7 @@ function Repair-NTFSPermissionsRecursively {
                         } else {
                             $strMessage = 'Unable to write ACL changes to disk for path "' + $WorkingPath + '". Child folders and files will not be processed!'
                         }
-                        Write-Warning -Message $strMessage
+                        Write-Error -Message $strMessage
                         intFunctionReturn = -14
                         return $intFunctionReturn
                         #endregion Write-ACLToObject failed ###################################
@@ -8201,7 +8198,7 @@ function Repair-NTFSPermissionsRecursively {
                                 $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
                                 $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
-                                Write-Verbose ('About to run command: ' + $strCommand)
+                                Write-Verbose -Message ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
 
                                 # Confirm the path is ready
@@ -8215,7 +8212,7 @@ function Repair-NTFSPermissionsRecursively {
                                     } else {
                                         $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
                                     }
-                                    Write-Verbose -Message $strMessage
+                                    Write-Debug -Message $strMessage
                                     $intReturnCode = -1
                                     #endregion The drive substitution seems to have failed
                                 } else {
@@ -8229,7 +8226,7 @@ function Repair-NTFSPermissionsRecursively {
                                 }
 
                                 $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                                Write-Verbose ('About to run command: ' + $strCommand)
+                                Write-Verbose -Message ('About to run command: ' + $strCommand)
                                 $null = Invoke-Expression $strCommand
 
                                 # TODO: This is not necessary, right? Because Wait-PathToBeNotReady will run Get-PSDrive
@@ -8348,7 +8345,7 @@ function Repair-NTFSPermissionsRecursively {
                                     }
 
                                     # Remove Symbolic Link
-                                    Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                    Write-Verbose -Message ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
                                     # TODO: Build error handling for this deletion:
                                     (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
 
@@ -8416,7 +8413,7 @@ function Repair-NTFSPermissionsRecursively {
                             } else {
                                 $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. A drive substitution or synbolic link should be used to mitigate this, however this mitigation has already been performed, so trying again with temporary path length ignoring mode enabled.'
                             }
-                            Write-Verbose -Message $strMessage
+                            Write-Debug -Message $strMessage
                             if ($boolFinalCleanupOfRedundantACEs) {
                                 $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits -FinalCleanupOfRedundantACEs
                             } else {
@@ -8440,7 +8437,7 @@ function Repair-NTFSPermissionsRecursively {
                                 } else {
                                     $strMessage = 'The path length on one or more child objects in folder "' + $WorkingPath + '" exceeds the maximum number of characters. Normally, a drive substitution or symbolic link should be used to mitigate this, however the path is already as short as possible. Therefore, there is nothing further to do to mitigate path length. Trying again with temporary path length ignoring mode enabled.'
                                 }
-                                Write-Verbose -Message $strMessage
+                                Write-Debug -Message $strMessage
                                 if ($boolFinalCleanupOfRedundantACEs) {
                                     $intReturnCode = Repair-NTFSPermissionsRecursively -WorkingPath $WorkingPath -LastShortenedPath $LastShortenedPath -RealPath $refToRealPath.Value -ReferenceToWhetherGetPSDriveWorkaroundIsKnownToBeUseful $refWorkingVersionOfWhetherGetPSDriveWorkaroundIsKnownToBeUseful -ReferenceToHashtableOfKnownSIDs $ReferenceToHashtableOfKnownSIDs -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls $refNameOfBuiltInAdministratorsGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfBuiltInAdministratorsGroupAccordingToGetAcl $refNameOfBuiltInAdministratorsGroupAccordingToGetAcl -ReferenceToNameOfSYSTEMAccountAccordingToTakeOwnAndICacls $refNameOfSYSTEMAccountAccordingToTakeOwnAndICacls -ReferenceToNameOfSYSTEMAccountAccordingToGetAcl $refNameOfSYSTEMAccountAccordingToGetAcl -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalAdministratorAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl $refNameOfAdditionalAdministratorAccountOrGroupAccordingToGetAcl -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToTakeOwnAndICacls -ReferenceToNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl $refNameOfAdditionalReadOnlyAccountOrGroupAccordingToGetAcl -RecursionDepth $RecursionDepth -IgnorePathLengthLimits -FinalCleanupOfRedundantACEs
                                 } else {
@@ -8468,7 +8465,7 @@ function Repair-NTFSPermissionsRecursively {
                                     $strDriveLetterToUse = $arrAvailableDriveLetters[$arrAvailableDriveLetters.Count - 1]
                                     $strEscapedPathForInvokeExpression = (((($strFolderTarget.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': "' + $strEscapedPathForInvokeExpression + '"'
-                                    Write-Verbose ('About to run command: ' + $strCommand)
+                                    Write-Verbose -Message ('About to run command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
 
                                     # Confirm the path is ready
@@ -8482,7 +8479,8 @@ function Repair-NTFSPermissionsRecursively {
                                         } else {
                                             $strMessage = 'There was an issue processing the path "' + $WorkingPath + '" because running the following command to mitigate path length failed to create an accessible drive letter (' + $strDriveLetterToUse + ':): ' + $strCommand + "`n`n" + 'Will try a symbolic link instead...'
                                         }
-                                        Write-Verbose -Message $strMessage
+                                        # TODO: Should this be an error?
+                                        Write-Debug -Message $strMessage
                                         $intReturnCode = -1
                                         #endregion The drive substitution seems to have failed
                                     } else {
@@ -8505,7 +8503,7 @@ function Repair-NTFSPermissionsRecursively {
                                     }
 
                                     $strCommand = 'C:\Windows\System32\subst.exe ' + $strDriveLetterToUse + ': /D'
-                                    Write-Verbose ('About to run command: ' + $strCommand)
+                                    Write-Verbose -Message ('About to run command: ' + $strCommand)
                                     $null = Invoke-Expression $strCommand
 
                                     # TODO: This is not necessary, right? Because Wait-PathToBeNotReady will run Get-PSDrive
@@ -8589,7 +8587,7 @@ function Repair-NTFSPermissionsRecursively {
                                             # TODO: Test this with a path containing a dollar sign ($)
                                             $strEscapedPathForInvokeExpression = (((($WorkingPath.Replace('`', '``')).Replace('$', '`$')).Replace([string]([char]8220), '`' + [string]([char]8220))).Replace([string]([char]8221), '`' + [string]([char]8221))).Replace([string]([char]8222), '`' + [string]([char]8222))
                                             $strCommand = 'C:\Windows\System32\cmd.exe /c mklink /D "' + (Join-Path 'C:' $strSymbolicLinkFolderName) + '" "' + $strEscapedPathForInvokeExpression + '"'
-                                            Write-Verbose ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
+                                            Write-Verbose -Message ('An error occurred when mitigating path length using drive substitution. Trying to create a symbolic link instead via command: ' + $strCommand)
                                             $null = Invoke-Expression $strCommand
                                             #endregion PowerShell 4.0 or older: make the symbolic link using mklink command
                                         }
@@ -8623,7 +8621,7 @@ function Repair-NTFSPermissionsRecursively {
                                         }
 
                                         # Remove Symbolic Link
-                                        Write-Verbose ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
+                                        Write-Verbose -Message ('Removing symbolic link: ' + (Join-Path 'C:' $strSymbolicLinkFolderName))
                                         # TODO: Build error handling for this deletion:
                                         (Get-Item (Join-Path 'C:' $strSymbolicLinkFolderName)).Delete()
 
@@ -8860,7 +8858,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'Found non-inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
                     }
-                    Write-Verbose -Message $strMessage
+                    Write-Debug -Message $strMessage
                     if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
                         #region Non-inherited ACE has an IdentityReference #############
                         if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
@@ -8893,7 +8891,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                     if ($boolSuccess -eq $false) {
                                         #region Access rule removal failed #############
-                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                        } else {
+                                            $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                        }
+                                        Write-Warning -Message $strMessage
                                         #endregion Access rule removal failed #############
                                     } else {
                                         #region Access rule removal was successful #####
@@ -8902,13 +8905,18 @@ function Repair-NTFSPermissionsRecursively {
                                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                             #region Permissions confirmed removed based on change in ACE count
-                                            Write-Verbose ('...the unresolved SID was removed...')
+                                            Write-Debug -Message ('...the unresolved SID was removed...')
                                             $intLastNumberOfItems = $intCurrentNumberOfItems
                                             $boolACLChangeMade = $true
                                             #endregion Permissions confirmed removed based on change in ACE count
                                         } else {
                                             #region Based on no change in ACE count, permissions were not removed
-                                            Write-Verbose ('...the unresolved SID was not removed...')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                            } else {
+                                                $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                            }
+                                            Write-Warning -Message $strMessage
                                             #endregion Based on no change in ACE count, permissions were not removed
                                         }
                                         #endregion Access rule removal was successful #####
@@ -8954,7 +8962,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($fileSystemAccessRuleOld))
                                     if ($boolSuccess -eq $false) {
                                         #region Access rule removal failed #########
-                                        Write-Verbose ('...the unresolved SID was not removed (.NET call failed)...')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                        } else {
+                                            $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                        }
+                                        Write-Warning -Message $strMessage
                                         #endregion Access rule removal failed #########
                                     } else {
                                         #region Access rule removal was successful #
@@ -8963,13 +8976,18 @@ function Repair-NTFSPermissionsRecursively {
                                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                             #region Permissions confirmed removed based on change in ACE count
-                                            Write-Verbose ('...the unresolved SID was removed...')
+                                            Write-Debug -Message ('...the unresolved SID was removed...')
                                             $intLastNumberOfItems = $intCurrentNumberOfItems
                                             $boolACLChangeMade = $true
                                             #endregion Permissions confirmed removed based on change in ACE count
                                         } else {
                                             #region Based on no change in ACE count, permissions were not removed
-                                            Write-Verbose ('...the unresolved SID was not removed...')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                            } else {
+                                                $strMessage = 'The unresolved SID (' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ') was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                            }
+                                            Write-Warning -Message $strMessage
                                             #endregion Based on no change in ACE count, permissions were not removed
                                         }
                                         #endregion Access rule removal was successful #
@@ -9005,7 +9023,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                     if ($boolSuccess -eq $false) {
                                         #region Access rule removal failed #############
-                                        Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                        } else {
+                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                        }
+                                        Write-Warning -Message $strMessage
                                         #endregion Access rule removal failed #############
                                     } else {
                                         #region Access rule removal was successful #####
@@ -9014,13 +9037,18 @@ function Repair-NTFSPermissionsRecursively {
                                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                             #region Permissions confirmed removed based on change in ACE count
-                                            Write-Verbose ('...the deny permission was removed...')
+                                            Write-Debug -Message ('...the deny permission was removed...')
                                             $intLastNumberOfItems = $intCurrentNumberOfItems
                                             $boolACLChangeMade = $true
                                             #endregion Permissions confirmed removed based on change in ACE count
                                         } else {
                                             #region Based on no change in ACE count, permissions were not removed
-                                            Write-Verbose ('...the deny permission was not removed...')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                            } else {
+                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                            }
+                                            Write-Warning -Message $strMessage
                                             #endregion Based on no change in ACE count, permissions were not removed
                                         }
                                         #endregion Access rule removal was successful #####
@@ -9105,7 +9133,12 @@ function Repair-NTFSPermissionsRecursively {
                                     $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                     if ($boolSuccess -eq $false) {
                                         #region Access rule removal failed #############
-                                        Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                        } else {
+                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                        }
+                                        Write-Warning -Message $strMessage
                                         #endregion Access rule removal failed #############
                                     } else {
                                         #region Access rule removal was successful #####
@@ -9114,13 +9147,18 @@ function Repair-NTFSPermissionsRecursively {
                                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                             #region Permissions confirmed removed based on change in ACE count
-                                            Write-Verbose ('...the deny permission was removed...')
+                                            Write-Debug -Message ('...the deny permission was removed...')
                                             $intLastNumberOfItems = $intCurrentNumberOfItems
                                             $boolACLChangeMade = $true
                                             #endregion Permissions confirmed removed based on change in ACE count
                                         } else {
                                             #region Based on no change in ACE count, permissions were not removed
-                                            Write-Verbose ('...the deny permission was not removed...')
+                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                            } else {
+                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                            }
+                                            Write-Warning -Message $strMessage
                                             #endregion Based on no change in ACE count, permissions were not removed
                                         }
                                         #endregion Access rule removal was successful #####
@@ -9213,7 +9251,12 @@ function Repair-NTFSPermissionsRecursively {
                                                 $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                                 if ($boolSuccess -eq $false) {
                                                     #region Access rule removal failed #############
-                                                    Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                                    if ($WorkingPath -ne $refToRealPath.Value) {
+                                                        $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                                    } else {
+                                                        $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                                    }
+                                                    Write-Warning -Message $strMessage
                                                     #endregion Access rule removal failed #############
                                                 } else {
                                                     #region Access rule removal was successful #####
@@ -9222,13 +9265,18 @@ function Repair-NTFSPermissionsRecursively {
                                                     $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                                     if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                                         #region Permissions confirmed removed based on change in ACE count
-                                                        Write-Verbose ('...the deny permission was removed...')
+                                                        Write-Debug -Message ('...the deny permission was removed...')
                                                         $intLastNumberOfItems = $intCurrentNumberOfItems
                                                         $boolACLChangeMade = $true
                                                         #endregion Permissions confirmed removed based on change in ACE count
                                                     } else {
                                                         #region Based on no change in ACE count, permissions were not removed
-                                                        Write-Verbose ('...the deny permission was not removed...')
+                                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                                        } else {
+                                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                                        }
+                                                        Write-Warning -Message $strMessage
                                                         #endregion Based on no change in ACE count, permissions were not removed
                                                     }
                                                     #endregion Access rule removal was successful #####
@@ -9434,7 +9482,12 @@ function Repair-NTFSPermissionsRecursively {
                                                     $boolSuccess = Remove-SpecificAccessRuleRobust -CurrentAttemptNumber 1 -MaxAttempts 2 -ReferenceToAccessControlListObject ([ref]$objThisObjectPermission) -ReferenceToAccessRuleObject ([ref]($arrWorkingACEs[$intCounterA]))
                                                     if ($boolSuccess -eq $false) {
                                                         #region Access rule removal failed #############
-                                                        Write-Verbose ('...the deny permission was not removed (.NET call failed)...')
+                                                        if ($WorkingPath -ne $refToRealPath.Value) {
+                                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (.NET call failed).'
+                                                        } else {
+                                                            $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (.NET call failed).'
+                                                        }
+                                                        Write-Warning -Message $strMessage
                                                         #endregion Access rule removal failed #############
                                                     } else {
                                                         #region Access rule removal was successful #####
@@ -9443,13 +9496,18 @@ function Repair-NTFSPermissionsRecursively {
                                                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                                                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                                                             #region Permissions confirmed removed based on change in ACE count
-                                                            Write-Verbose ('...the deny permission was removed...')
+                                                            Write-Debug -Message ('...the deny permission was removed...')
                                                             $intLastNumberOfItems = $intCurrentNumberOfItems
                                                             $boolACLChangeMade = $true
                                                             #endregion Permissions confirmed removed based on change in ACE count
                                                         } else {
                                                             #region Based on no change in ACE count, permissions were not removed
-                                                            Write-Verbose ('...the deny permission was not removed...')
+                                                            if ($WorkingPath -ne $refToRealPath.Value) {
+                                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (real path: "' + $refToRealPath.Value + '") (ACE count did not change as expected after removal).'
+                                                            } else {
+                                                                $strMessage = 'The deny ACE for ' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + ' was not removed from path "' + $WorkingPath + '" (ACE count did not change as expected after removal).'
+                                                            }
+                                                            Write-Warning -Message $strMessage
                                                             #endregion Based on no change in ACE count, permissions were not removed
                                                         }
                                                         #endregion Access rule removal was successful #####
@@ -9529,7 +9587,7 @@ function Repair-NTFSPermissionsRecursively {
                     } else {
                         $strMessage = 'Found inherited ACE in path "' + $WorkingPath + '". AccessControlType="' + ($arrWorkingACEs[$intCounterA]).AccessControlType + '"; IdentityReference="' + ($arrWorkingACEs[$intCounterA]).IdentityReference.Value + '"; FileSystemRights="' + ($arrWorkingACEs[$intCounterA]).FileSystemRights + '"; InheritanceFlags="' + ($arrWorkingACEs[$intCounterA]).InheritanceFlags + '"; PropagationFlags="' + ($arrWorkingACEs[$intCounterA]).PropagationFlags + '".'
                     }
-                    Write-Verbose -Message $strMessage
+                    Write-Debug -Message $strMessage
                     if ($null -ne ($arrWorkingACEs[$intCounterA]).IdentityReference) {
                         #region Inherited ACE has an IdentityReference #################
                         if (($arrWorkingACEs[$intCounterA]).IdentityReference.GetType().Name -eq 'SecurityIdentifier') {
@@ -9975,7 +10033,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -10022,7 +10080,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed added based on change in ACE count
-                            Write-Verbose ('...the permission was added...')
+                            Write-Debug -Message ('...the permission was added...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed added based on change in ACE count
@@ -10077,7 +10135,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -10124,7 +10182,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed added based on change in ACE count
-                            Write-Verbose ('...the permission was added...')
+                            Write-Debug -Message ('...the permission was added...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed added based on change in ACE count
@@ -10179,7 +10237,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -10226,7 +10284,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed added based on change in ACE count
-                            Write-Verbose ('...the permission was added...')
+                            Write-Debug -Message ('...the permission was added...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed added based on change in ACE count
@@ -10277,7 +10335,7 @@ function Repair-NTFSPermissionsRecursively {
                     $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                     if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                         #region Permissions confirmed added based on change in ACE count
-                        Write-Verbose ('...the permission was added...')
+                        Write-Debug -Message ('...the permission was added...')
                         $intLastNumberOfItems = $intCurrentNumberOfItems
                         $boolACLChangeMade = $true
                         #endregion Permissions confirmed added based on change in ACE count
@@ -10331,7 +10389,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed removed based on change in ACE count
-                            Write-Verbose ('...the permission was removed...')
+                            Write-Debug -Message ('...the permission was removed...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed removed based on change in ACE count
@@ -10378,7 +10436,7 @@ function Repair-NTFSPermissionsRecursively {
                         $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                         if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                             #region Permissions confirmed added based on change in ACE count
-                            Write-Verbose ('...the permission was added...')
+                            Write-Debug -Message ('...the permission was added...')
                             $intLastNumberOfItems = $intCurrentNumberOfItems
                             $boolACLChangeMade = $true
                             #endregion Permissions confirmed added based on change in ACE count
@@ -10428,7 +10486,7 @@ function Repair-NTFSPermissionsRecursively {
                     $intCurrentNumberOfItems = $objThisObjectPermission.Access.Count
                     if ($intCurrentNumberOfItems -ne $intLastNumberOfItems) {
                         #region Permissions confirmed added based on change in ACE count
-                        Write-Verbose ('...the permission was added...')
+                        Write-Debug -Message ('...the permission was added...')
                         $intLastNumberOfItems = $intCurrentNumberOfItems
                         $boolACLChangeMade = $true
                         #endregion Permissions confirmed added based on change in ACE count
@@ -10491,7 +10549,7 @@ function Repair-NTFSPermissionsRecursively {
 
 #region Process Input ##############################################################
 if ([string]::IsNullOrEmpty($PathToFix)) {
-    Write-Warning 'The PathToFix parameter is required.'
+    Write-Error -Message 'The PathToFix parameter is required.'
     return
 }
 
@@ -10529,27 +10587,27 @@ if ($boolRemoveUnresolvedSIDs -eq $true) {
     # in the ACLs.
 
     if ([string]::IsNullOrEmpty($strPathToCSVContainingKnownSIDs) -eq $true) {
-        Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but no path to a CSV file containing all known SIDs in the environment was specified. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+        Write-Error -Message 'The -RemoveUnresolvedSIDs parameter was specified, but no path to a CSV file containing all known SIDs in the environment was specified. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
         return
     } else {
         if ((Test-Path $strPathToCSVContainingKnownSIDs) -eq $false) {
-            Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the path specified for the CSV file containing all known SIDs in the environment does not exist. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+            Write-Error -Message 'The -RemoveUnresolvedSIDs parameter was specified, but the path specified for the CSV file containing all known SIDs in the environment does not exist. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
             return
         } else {
             $arrSIDsFromCSV = @()
             $arrSIDsFromCSV = @(Import-Csv $strPathToCSVContainingKnownSIDs)
             if ($arrSIDsFromCSV.Count -eq 0) {
-                Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment is empty. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+                Write-Error -Message 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment is empty. Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
                 return
             } else {
                 $strKnownSID = ($arrSIDsFromCSV[0]).SID
                 if ([string]::IsNullOrEmpty($strKnownSID) -eq $true) {
-                    Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment contains an empty value for the "SID" column (or does not contain the SID column at all). Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+                    Write-Error -Message 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment contains an empty value for the "SID" column (or does not contain the SID column at all). Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
                     return
                 } else {
                     # The CSV file specified for the CSV file containing all known SIDs in the environment appears to be valid
                     # Build these into a $hashtable for fast lookup later
-                    Write-Verbose 'Loading known SIDs from the specified CSV file into memory...'
+                    Write-Debug -Message 'Loading known SIDs from the specified CSV file into memory...'
                     $hashtableKnownSIDs = @{}
                     $arrSIDsFromCSV | ForEach-Object {
                         $strSID = $_.SID
@@ -10559,11 +10617,11 @@ if ($boolRemoveUnresolvedSIDs -eq $true) {
                             }
                         }
                     }
-                    Write-Verbose 'Finished loading known SIDs from the specified CSV file into memory'
+                    Write-Debug -Message 'Finished loading known SIDs from the specified CSV file into memory'
 
                     # Make sure the count of SIDs is not zero in the hashtable
                     if ($hashtableKnownSIDs.Count -eq 0) {
-                        Write-Warning 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment contains an empty value for the "SID" column (or does not contain the SID column at all). Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
+                        Write-Error -Message 'The -RemoveUnresolvedSIDs parameter was specified, but the CSV file specified for the CSV file containing all known SIDs in the environment contains an empty value for the "SID" column (or does not contain the SID column at all). Please create a CSV containing all known SIDs in the environment and then specify the path to that CSV using the -PathToCSVContainingKnownSIDs parameter. The CSV should contain a column header "SID" and then list all of the SIDs beneath it in string format'
                         return
                     }
                 }
